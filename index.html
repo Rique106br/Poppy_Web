@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Playtime: Capítulo 1 & 2 - Controles Fixos</title>
+  <title>Playtime: Capítulo 1 & 2 - Lanterna Fix</title>
   <style>
     /* Reset total de eventos nativos do navegador */
     * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
@@ -24,7 +24,6 @@
       position: absolute; width: 120px; height: 120px;
       background: rgba(255, 255, 255, 0.1); border: 2px solid rgba(255, 255, 255, 0.3);
       border-radius: 50%; z-index: 6; pointer-events: none; display: none;
-      /* Posição padrão */
       bottom: 25px; left: 25px;
     }
     #joystick-knob {
@@ -43,7 +42,7 @@
     }
     #interact-btn:active { background: rgba(255, 204, 0, 0.6); }
 
-    /* Barra Superior */
+    /* Barra Superior e HUD */
     #hud-info {
       position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
       display: flex; flex-direction: column; align-items: center; gap: 3px;
@@ -52,13 +51,8 @@
     #zone-title { color: #aaa; font-size: 11px; letter-spacing: 2px; }
     #inventory-status { color: #ff4444; font-size: 11px; letter-spacing: 1px; }
 
-    #top-bar {
-      position: absolute; top: 12px; right: 12px; display: flex; gap: 8px; z-index: 30; display: none;
-    }
-    .hud-btn {
-      background: rgba(0,0,0,0.6); border: 1px solid #777; color: #fff;
-      font-size: 10px; font-family: inherit; padding: 10px 14px; border-radius: 4px;
-    }
+    #top-bar { position: absolute; top: 12px; right: 12px; display: flex; gap: 8px; z-index: 30; display: none; }
+    .hud-btn { background: rgba(0,0,0,0.6); border: 1px solid #777; color: #fff; font-size: 10px; font-family: inherit; padding: 10px 14px; border-radius: 4px; }
     #debug-toggle { border-color: #00ff88; color: #00ff88; }
 
     /* Notas */
@@ -94,19 +88,16 @@
 <body>
   <div id="start-overlay">
     <h1>PLAYTIME CO.</h1>
-    <p>O Analógico agora é flutuante.<br>Toque em qualquer ponto do lado esquerdo para andar.</p>
+    <p>A lanterna foi consertada. Explore as instalações inferiores.</p>
     <label class="debug-box"><input type="checkbox" id="debug-checkbox" checked> MODO DEBUG: CONGELAR BICHO</label>
     <button id="start-btn">INICIAR JOGO</button>
   </div>
 
   <div id="jumpscare"></div>
-
   <div id="zone-move"></div>
   <div id="zone-look"></div>
-
   <div id="joystick-container"><div id="joystick-knob"></div></div>
   <button id="interact-btn">INTERAGIR</button>
-
   <div id="crosshair"></div>
   
   <div id="top-bar">
@@ -173,7 +164,7 @@
       osc.connect(gain); gain.connect(audioCtx.destination); osc.start(now);
     }
 
-    // --- CENA THREE.JS ---
+    // --- CENA THREE.JS E LANTERNA CORRIGIDA ---
     const scene = new THREE.Scene();
     scene.fog = new THREE.FogExp2(0x06060c, 0.04);
 
@@ -185,10 +176,15 @@
 
     const ambientLight = new THREE.AmbientLight(0x2a2a38, 0.9);
     scene.add(ambientLight);
-    const flashlight = new THREE.SpotLight(0xffeedd, 3.5, 32, Math.PI / 4.5, 0.4);
+
+    // CORREÇÃO: Lanterna aponta para um alvo colado à câmara na parte da frente
+    const flashlight = new THREE.SpotLight(0xffeedd, 4.0, 40, Math.PI / 5, 0.5, 1);
+    flashlight.position.set(0, 0, 0);
     camera.add(flashlight);
-    flashlight.position.set(0, 0, 0); flashlight.target = camera;
+    flashlight.target.position.set(0, 0, -1); // Aponta para a frente da câmara
+    camera.add(flashlight.target);
     scene.add(camera);
+
     const elevatorLight = new THREE.PointLight(0xff1100, 0, 10);
     elevatorLight.position.set(0, -4.5, -57);
     scene.add(elevatorLight);
@@ -288,7 +284,7 @@
       }
     });
 
-    // --- CONTROLES MÓVEIS CORRIGIDOS ({ passive: false }) ---
+    // --- CONTROLES MÓVEIS CORRIGIDOS ---
     const zoneMove = document.getElementById('zone-move');
     const zoneLook = document.getElementById('zone-look');
     const knob = document.getElementById('joystick-knob');
@@ -301,20 +297,15 @@
     let lookLast = { x: 0, y: 0 };
     let yaw = 0, pitch = 0;
 
-    // Joystick Dinâmico (Flutuante)
     zoneMove.addEventListener('touchstart', (e) => {
       e.preventDefault();
       if (joyTouchId !== null) return;
       const t = e.changedTouches[0];
       joyTouchId = t.identifier;
-      
-      // Centraliza o analógico onde o dedo tocou!
-      joyStart.x = t.clientX;
-      joyStart.y = t.clientY;
-      joyContainer.style.left = (joyStart.x - 60) + 'px'; // 60 é metade da largura (120/2)
+      joyStart.x = t.clientX; joyStart.y = t.clientY;
+      joyContainer.style.left = (joyStart.x - 60) + 'px'; 
       joyContainer.style.top = (joyStart.y - 60) + 'px';
-      joyContainer.style.bottom = 'auto'; // Desativa a ancoragem de baixo
-      
+      joyContainer.style.bottom = 'auto';
       handleJoyMove(t.clientX, t.clientY);
     }, { passive: false });
 
@@ -330,7 +321,6 @@
       for (let t of e.changedTouches) {
         if (t.identifier === joyTouchId) {
           joyTouchId = null; moveVector = { x: 0, y: 0 }; knob.style.transform = `translate(-50%, -50%)`;
-          // Volta o analógico para a posição de espera
           joyContainer.style.left = '25px'; joyContainer.style.bottom = '25px'; joyContainer.style.top = 'auto';
         }
       }
@@ -345,11 +335,9 @@
       const dist = Math.hypot(dx, dy);
       if (dist > maxDist) { dx = (dx / dist) * maxDist; dy = (dy / dist) * maxDist; }
       knob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
-      moveVector.x = dx / maxDist;
-      moveVector.y = dy / maxDist;
+      moveVector.x = dx / maxDist; moveVector.y = dy / maxDist;
     }
 
-    // Controle de Câmera
     zoneLook.addEventListener('touchstart', (e) => {
       e.preventDefault();
       if (lookTouchId !== null) return;
@@ -362,8 +350,7 @@
       e.preventDefault();
       for (let t of e.changedTouches) {
         if (t.identifier === lookTouchId) {
-          yaw -= (t.clientX - lookLast.x) * 0.005;
-          pitch -= (t.clientY - lookLast.y) * 0.005;
+          yaw -= (t.clientX - lookLast.x) * 0.005; pitch -= (t.clientY - lookLast.y) * 0.005;
           pitch = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, pitch));
           lookLast.x = t.clientX; lookLast.y = t.clientY;
         }
@@ -404,6 +391,10 @@
         stepTimer++;
         if (stepTimer > 22) { playSom(camera.position.z < -20 ? 'metal' : 'passo'); stepTimer = 0; }
       }
+      
+      // Cintilação da Lanterna
+      if (Math.random() > 0.95) flashlight.intensity = 3.5 + Math.random() * 1.5;
+      else flashlight.intensity = 4.0;
 
       if (!elevatorMoving && !dead) {
         let targetY = 1.6;
