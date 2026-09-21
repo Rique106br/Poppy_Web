@@ -3,15 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Playtime: Capítulo 1 & 2 - Fix</title>
+  <title>Playtime: Capítulo 1 & 2 - Controles Fixos</title>
   <style>
-    /* Reset sem bloquear cliques globais */
-    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
-    html, body { width: 100%; height: 100%; overflow: hidden; background: #000; font-family: 'Courier New', Courier, monospace; }
+    /* Reset total de eventos nativos do navegador */
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #000; font-family: 'Courier New', Courier, monospace; touch-action: none; }
     
-    /* Zonas de Toque Divididas (Ocultas até o jogo iniciar) */
-    #zone-move { position: absolute; top: 0; left: 0; width: 50vw; height: 100vh; z-index: 5; touch-action: none; display: none; }
-    #zone-look { position: absolute; top: 0; right: 0; width: 50vw; height: 100vh; z-index: 5; touch-action: none; display: none; }
+    /* Zonas de Toque (Ocultas até o jogo iniciar) */
+    #zone-move { position: absolute; top: 0; left: 0; width: 50vw; height: 100vh; z-index: 5; display: none; }
+    #zone-look { position: absolute; top: 0; right: 0; width: 50vw; height: 100vh; z-index: 5; display: none; }
 
     #crosshair {
       position: absolute; top: 50%; left: 50%; width: 6px; height: 6px;
@@ -19,11 +19,13 @@
       pointer-events: none; z-index: 10; display: none;
     }
     
-    /* Joystick Analógico */
+    /* Joystick Analógico Flutuante */
     #joystick-container {
-      position: absolute; bottom: 25px; left: 25px; width: 120px; height: 120px;
+      position: absolute; width: 120px; height: 120px;
       background: rgba(255, 255, 255, 0.1); border: 2px solid rgba(255, 255, 255, 0.3);
       border-radius: 50%; z-index: 6; pointer-events: none; display: none;
+      /* Posição padrão */
+      bottom: 25px; left: 25px;
     }
     #joystick-knob {
       position: absolute; top: 50%; left: 50%; width: 50px; height: 50px;
@@ -56,11 +58,10 @@
     .hud-btn {
       background: rgba(0,0,0,0.6); border: 1px solid #777; color: #fff;
       font-size: 10px; font-family: inherit; padding: 10px 14px; border-radius: 4px;
-      touch-action: manipulation;
     }
     #debug-toggle { border-color: #00ff88; color: #00ff88; }
 
-    /* Diálogo / Notas */
+    /* Notas */
     #note-modal {
       position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
       width: 85%; max-width: 400px; background: #ece5d8; color: #1a1a1a;
@@ -69,10 +70,7 @@
     }
     #note-title { font-size: 14px; font-weight: bold; margin-bottom: 8px; border-bottom: 1px solid #aaa; padding-bottom: 4px; }
     #note-body { font-size: 12px; line-height: 1.5; margin-bottom: 16px; white-space: pre-wrap; }
-    #note-close {
-      background: #2b2b2b; color: #fff; border: none; padding: 12px 16px;
-      font-size: 12px; font-family: inherit; width: 100%; border-radius: 2px;
-    }
+    #note-close { background: #2b2b2b; color: #fff; border: none; padding: 12px 16px; font-size: 12px; width: 100%; border-radius: 2px; }
 
     /* Tela Inicial */
     #start-overlay {
@@ -83,55 +81,30 @@
     }
     #start-overlay h1 { font-size: 24px; letter-spacing: 3px; margin-bottom: 10px; }
     #start-overlay p { font-size: 13px; color: #aaa; margin-bottom: 20px; line-height: 1.5; }
-    
-    .debug-box {
-      margin-bottom: 20px; display: flex; align-items: center; gap: 8px; font-size: 14px; color: #00ffcc;
-    }
+    .debug-box { margin-bottom: 20px; display: flex; align-items: center; gap: 8px; font-size: 14px; color: #00ffcc; }
     .debug-box input { width: 22px; height: 22px; }
+    #start-btn { padding: 16px 36px; background: #ffcc00; color: #000; border: none; font-weight: bold; font-family: inherit; font-size: 16px; border-radius: 4px; box-shadow: 0 0 10px rgba(255, 204, 0, 0.5); }
+    #start-btn:active { transform: scale(0.95); }
 
-    #start-btn {
-      padding: 16px 36px; background: #ffcc00; color: #000; border: none;
-      font-weight: bold; font-family: inherit; font-size: 16px; border-radius: 4px; box-shadow: 0 0 10px rgba(255, 204, 0, 0.5);
-      touch-action: manipulation;
-    }
-    #start-btn:active { background: #e6b800; transform: scale(0.95); }
-
-    #chapter-splash {
-      position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%);
-      color: #ff2222; font-size: 22px; letter-spacing: 4px; text-shadow: 0 0 10px #ff0000;
-      display: none; z-index: 50; text-align: center; pointer-events: none;
-    }
-    #jumpscare {
-      position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
-      background: #ff0000; display: none; z-index: 200;
-    }
+    #chapter-splash { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); color: #ff2222; font-size: 22px; letter-spacing: 4px; text-shadow: 0 0 10px #ff0000; display: none; z-index: 50; text-align: center; pointer-events: none; }
+    #jumpscare { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: #ff0000; display: none; z-index: 200; }
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
-  <!-- Tela de Inicialização -->
   <div id="start-overlay">
     <h1>PLAYTIME CO.</h1>
-    <p>Toque para entrar. Use a METADE ESQUERDA da tela para andar e a METADE DIREITA para olhar.</p>
-    
-    <label class="debug-box">
-      <input type="checkbox" id="debug-checkbox" checked>
-      MODO DEBUG: CONGELAR BICHO
-    </label>
-
+    <p>O Analógico agora é flutuante.<br>Toque em qualquer ponto do lado esquerdo para andar.</p>
+    <label class="debug-box"><input type="checkbox" id="debug-checkbox" checked> MODO DEBUG: CONGELAR BICHO</label>
     <button id="start-btn">INICIAR JOGO</button>
   </div>
 
   <div id="jumpscare"></div>
 
-  <!-- Zonas de Toque (Ocultas na tela inicial) -->
   <div id="zone-move"></div>
   <div id="zone-look"></div>
 
-  <!-- Elementos de Controlo -->
-  <div id="joystick-container">
-    <div id="joystick-knob"></div>
-  </div>
+  <div id="joystick-container"><div id="joystick-knob"></div></div>
   <button id="interact-btn">INTERAGIR</button>
 
   <div id="crosshair"></div>
@@ -164,13 +137,28 @@
     let dead = false;
     let isGameStarted = false;
 
-    // --- MOTOR DE ÁUDIO NATIVO ---
+    // --- FUNÇÕES DE INTERFACE ---
+    function bindButton(id, callback) {
+      const btn = document.getElementById(id);
+      if(!btn) return;
+      btn.addEventListener('touchstart', (e) => { e.preventDefault(); e.stopPropagation(); callback(); }, { passive: false });
+      btn.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); callback(); });
+    }
+
+    async function activateImmersiveMode() {
+      try {
+        if (!document.fullscreenElement) {
+          if (document.documentElement.requestFullscreen) await document.documentElement.requestFullscreen();
+          else if (document.documentElement.webkitRequestFullscreen) await document.documentElement.webkitRequestFullscreen();
+        }
+        if (screen.orientation && screen.orientation.lock) await screen.orientation.lock('landscape').catch(()=>{});
+      } catch (err) {}
+    }
+
+    // --- ÁUDIO ---
     let audioCtx = null;
     function initAudio() {
-      try {
-        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        if (audioCtx.state === 'suspended') audioCtx.resume();
-      } catch(e) {}
+      try { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); if (audioCtx.state === 'suspended') audioCtx.resume(); } catch(e) {}
     }
 
     function playSom(tipo) {
@@ -178,28 +166,11 @@
       const osc = audioCtx.createOscillator();
       const gain = audioCtx.createGain();
       const now = audioCtx.currentTime;
-
-      if (tipo === 'passo') {
-        osc.type = 'sine'; osc.frequency.setValueAtTime(130, now); osc.frequency.exponentialRampToValueAtTime(40, now + 0.1);
-        gain.gain.setValueAtTime(0.15, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
-        osc.stop(now + 0.15);
-      } else if (tipo === 'metal') {
-        osc.type = 'triangle'; osc.frequency.setValueAtTime(80, now); osc.frequency.exponentialRampToValueAtTime(30, now + 0.12);
-        gain.gain.setValueAtTime(0.18, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
-        osc.stop(now + 0.15);
-      } else if (tipo === 'porta') {
-        osc.type = 'square'; osc.frequency.setValueAtTime(140, now); osc.frequency.exponentialRampToValueAtTime(60, now + 0.4);
-        gain.gain.setValueAtTime(0.15, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
-        osc.stop(now + 0.5);
-      } else if (tipo === 'pegar') {
-        osc.type = 'sine'; osc.frequency.setValueAtTime(440, now); osc.frequency.exponentialRampToValueAtTime(880, now + 0.2);
-        gain.gain.setValueAtTime(0.2, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
-        osc.stop(now + 0.25);
-      }
-
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-      osc.start(now);
+      if (tipo === 'passo') { osc.type = 'sine'; osc.frequency.setValueAtTime(130, now); osc.frequency.exponentialRampToValueAtTime(40, now + 0.1); gain.gain.setValueAtTime(0.15, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12); osc.stop(now + 0.15); }
+      else if (tipo === 'metal') { osc.type = 'triangle'; osc.frequency.setValueAtTime(80, now); osc.frequency.exponentialRampToValueAtTime(30, now + 0.12); gain.gain.setValueAtTime(0.18, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12); osc.stop(now + 0.15); }
+      else if (tipo === 'porta') { osc.type = 'square'; osc.frequency.setValueAtTime(140, now); osc.frequency.exponentialRampToValueAtTime(60, now + 0.4); gain.gain.setValueAtTime(0.15, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45); osc.stop(now + 0.5); }
+      else if (tipo === 'pegar') { osc.type = 'sine'; osc.frequency.setValueAtTime(440, now); osc.frequency.exponentialRampToValueAtTime(880, now + 0.2); gain.gain.setValueAtTime(0.2, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22); osc.stop(now + 0.25); }
+      osc.connect(gain); gain.connect(audioCtx.destination); osc.start(now);
     }
 
     // --- CENA THREE.JS ---
@@ -214,125 +185,71 @@
 
     const ambientLight = new THREE.AmbientLight(0x2a2a38, 0.9);
     scene.add(ambientLight);
-
     const flashlight = new THREE.SpotLight(0xffeedd, 3.5, 32, Math.PI / 4.5, 0.4);
     camera.add(flashlight);
-    flashlight.position.set(0, 0, 0);
-    flashlight.target = camera;
+    flashlight.position.set(0, 0, 0); flashlight.target = camera;
     scene.add(camera);
-
     const elevatorLight = new THREE.PointLight(0xff1100, 0, 10);
     elevatorLight.position.set(0, -4.5, -57);
     scene.add(elevatorLight);
 
-    // Materiais
+    // Estruturas
     const matWood = new THREE.MeshStandardMaterial({ color: 0x4a3424, roughness: 0.7 });
     const matWallStore = new THREE.MeshStandardMaterial({ color: 0x3d4b58, roughness: 0.8 });
     const matConcrete = new THREE.MeshStandardMaterial({ color: 0x222226, roughness: 0.9 });
     const matMetal = new THREE.MeshStandardMaterial({ color: 0x4d4d5a, metalness: 0.8, roughness: 0.3 });
     const matDeepFloor = new THREE.MeshStandardMaterial({ color: 0x12151a, roughness: 0.3, metalness: 0.4 });
 
-    // Construção do Mapa
     const shopFloor = new THREE.Mesh(new THREE.PlaneGeometry(24, 30), matWood);
-    shopFloor.rotation.x = -Math.PI / 2;
-    shopFloor.position.set(0, 0, 5);
-    scene.add(shopFloor);
+    shopFloor.rotation.x = -Math.PI / 2; shopFloor.position.set(0, 0, 5); scene.add(shopFloor);
 
-    function createWall(w, h, d, x, y, z) {
-      const wall = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), matWallStore);
-      wall.position.set(x, y, z);
-      scene.add(wall);
-    }
-    createWall(24, 6, 0.5, 0, 3, 20);
-    createWall(0.5, 6, 30, -12, 3, 5);
-    createWall(0.5, 6, 30, 12, 3, 5);
+    function createWall(w, h, d, x, y, z) { const wall = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), matWallStore); wall.position.set(x, y, z); scene.add(wall); }
+    createWall(24, 6, 0.5, 0, 3, 20); createWall(0.5, 6, 30, -12, 3, 5); createWall(0.5, 6, 30, 12, 3, 5);
 
     const ramp = new THREE.Mesh(new THREE.PlaneGeometry(8, 16), matConcrete);
-    ramp.rotation.x = -Math.PI / 2 + 0.375;
-    ramp.position.set(0, -3, -16);
-    scene.add(ramp);
+    ramp.rotation.x = -Math.PI / 2 + 0.375; ramp.position.set(0, -3, -16); scene.add(ramp);
 
     const subFloor = new THREE.Mesh(new THREE.PlaneGeometry(30, 30), matConcrete);
-    subFloor.rotation.x = -Math.PI / 2;
-    subFloor.position.set(0, -6, -37);
-    scene.add(subFloor);
+    subFloor.rotation.x = -Math.PI / 2; subFloor.position.set(0, -6, -37); scene.add(subFloor);
 
     const keyMesh = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.05, 0.5), new THREE.MeshBasicMaterial({ color: 0xff1122 }));
-    keyMesh.position.set(8, -4.95, -40);
-    scene.add(keyMesh);
+    keyMesh.position.set(8, -4.95, -40); scene.add(keyMesh);
 
     const door = new THREE.Mesh(new THREE.BoxGeometry(4, 5, 0.4), new THREE.MeshStandardMaterial({ color: 0x882222, metalness: 0.7 }));
-    door.position.set(0, -3.5, -51.8);
-    scene.add(door);
+    door.position.set(0, -3.5, -51.8); scene.add(door);
 
     const elevatorPanel = new THREE.Mesh(new THREE.BoxGeometry(0.6, 1.0, 0.2), new THREE.MeshBasicMaterial({ color: 0x33ff33 }));
-    elevatorPanel.position.set(2.5, -4.0, -57);
-    scene.add(elevatorPanel);
+    elevatorPanel.position.set(2.5, -4.0, -57); scene.add(elevatorPanel);
 
     const elevatorCabin = new THREE.Group();
-    const elevFloor = new THREE.Mesh(new THREE.PlaneGeometry(6, 6), matMetal);
-    elevFloor.rotation.x = -Math.PI / 2;
-    elevatorCabin.add(elevFloor);
-    elevatorCabin.position.set(0, -6, -57);
-    scene.add(elevatorCabin);
+    const elevFloor = new THREE.Mesh(new THREE.PlaneGeometry(6, 6), matMetal); elevFloor.rotation.x = -Math.PI / 2;
+    elevatorCabin.add(elevFloor); elevatorCabin.position.set(0, -6, -57); scene.add(elevatorCabin);
 
     const deepFloor = new THREE.Mesh(new THREE.PlaneGeometry(40, 50), matDeepFloor);
-    deepFloor.rotation.x = -Math.PI / 2;
-    deepFloor.position.set(0, -24, -80);
-    scene.add(deepFloor);
+    deepFloor.rotation.x = -Math.PI / 2; deepFloor.position.set(0, -24, -80); scene.add(deepFloor);
 
     // CRIATURA
     const monsterGroup = new THREE.Group();
     const matMonsterBody = new THREE.MeshStandardMaterial({ color: 0x0e2f59, roughness: 0.9 });
-    const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.25, 2.2, 8), matMonsterBody);
-    torso.position.y = 2.0;
-    monsterGroup.add(torso);
-    
-    const eye1 = new THREE.Mesh(new THREE.SphereGeometry(0.08, 6, 6), new THREE.MeshBasicMaterial({ color: 0xffffff }));
-    eye1.position.set(0.18, 3.4, 0.38);
-    monsterGroup.add(eye1);
-    
-    const eye2 = eye1.clone();
-    eye2.position.x = -0.18;
-    monsterGroup.add(eye2);
+    const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.25, 2.2, 8), matMonsterBody); torso.position.y = 2.0; monsterGroup.add(torso);
+    const eye1 = new THREE.Mesh(new THREE.SphereGeometry(0.08, 6, 6), new THREE.MeshBasicMaterial({ color: 0xffffff })); eye1.position.set(0.18, 3.4, 0.38); monsterGroup.add(eye1);
+    const eye2 = eye1.clone(); eye2.position.x = -0.18; monsterGroup.add(eye2);
+    const armL = new THREE.Mesh(new THREE.BoxGeometry(0.15, 2.5, 0.15), matMonsterBody); armL.position.set(0.55, 1.8, 0); const armR = armL.clone(); armR.position.x = -0.55;
+    monsterGroup.add(armL); monsterGroup.add(armR);
+    monsterGroup.position.set(0, -6, -45); scene.add(monsterGroup);
 
-    const armL = new THREE.Mesh(new THREE.BoxGeometry(0.15, 2.5, 0.15), matMonsterBody);
-    armL.position.set(0.55, 1.8, 0);
-    const armR = armL.clone();
-    armR.position.x = -0.55;
-    monsterGroup.add(armL);
-    monsterGroup.add(armR);
-
-    monsterGroup.position.set(0, -6, -45);
-    scene.add(monsterGroup);
-
-    // --- MENUS E BOTÕES (INTERFACE) ---
-    const startBtn = document.getElementById('start-btn');
-    const startOverlay = document.getElementById('start-overlay');
+    // --- MENUS ---
     const debugToggle = document.getElementById('debug-toggle');
-    const btnFullscreen = document.getElementById('btn-fullscreen');
-    const interactBtn = document.getElementById('interact-btn');
-    const noteCloseBtn = document.getElementById('note-close');
-
     function updateDebugButton() {
-      if (isMonsterFrozen) {
-        debugToggle.innerText = "DEBUG: TRAVADO";
-        debugToggle.style.borderColor = "#00ff88";
-        debugToggle.style.color = "#00ff88";
-      } else {
-        debugToggle.innerText = "DEBUG: ATIVO";
-        debugToggle.style.borderColor = "#ff0000";
-        debugToggle.style.color = "#ff0000";
-      }
+      if (isMonsterFrozen) { debugToggle.innerText = "DEBUG: TRAVADO"; debugToggle.style.borderColor = "#00ff88"; debugToggle.style.color = "#00ff88"; }
+      else { debugToggle.innerText = "DEBUG: ATIVO"; debugToggle.style.borderColor = "#ff0000"; debugToggle.style.color = "#ff0000"; }
     }
 
-    startBtn.onclick = async () => {
+    bindButton('start-btn', () => {
       isMonsterFrozen = document.getElementById('debug-checkbox').checked;
       updateDebugButton();
+      document.getElementById('start-overlay').style.display = 'none';
       
-      startOverlay.style.display = 'none';
-      
-      // Mostrar HUD do Jogo e Zonas de Toque
       document.getElementById('zone-move').style.display = 'block';
       document.getElementById('zone-look').style.display = 'block';
       document.getElementById('crosshair').style.display = 'block';
@@ -340,87 +257,38 @@
       document.getElementById('top-bar').style.display = 'flex';
       document.getElementById('hud-info').style.display = 'flex';
       
-      initAudio();
-      
-      try {
-        if (!document.fullscreenElement) {
-          if (document.documentElement.requestFullscreen) await document.documentElement.requestFullscreen();
-          else if (document.documentElement.webkitRequestFullscreen) await document.documentElement.webkitRequestFullscreen();
-        }
-        if (screen.orientation && screen.orientation.lock) await screen.orientation.lock('landscape').catch(()=>{});
-      } catch (err) {}
-
-      setTimeout(onWindowResize, 300);
+      initAudio(); activateImmersiveMode(); setTimeout(onWindowResize, 300);
       isGameStarted = true;
-    };
+    });
 
-    btnFullscreen.onclick = async () => {
-      try {
-        if (!document.fullscreenElement) {
-          if (document.documentElement.requestFullscreen) await document.documentElement.requestFullscreen();
-          else if (document.documentElement.webkitRequestFullscreen) await document.documentElement.webkitRequestFullscreen();
-        }
-        if (screen.orientation && screen.orientation.lock) await screen.orientation.lock('landscape').catch(()=>{});
-      } catch (err) {}
-      setTimeout(onWindowResize, 300);
-    };
-
-    debugToggle.onclick = () => {
-      isMonsterFrozen = !isMonsterFrozen;
-      updateDebugButton();
-    };
-
-    noteCloseBtn.onclick = () => {
-      document.getElementById('note-modal').style.display = 'none';
-    };
+    bindButton('btn-fullscreen', () => { activateImmersiveMode(); setTimeout(onWindowResize, 300); });
+    bindButton('debug-toggle', () => { isMonsterFrozen = !isMonsterFrozen; updateDebugButton(); });
+    bindButton('note-close', () => { document.getElementById('note-modal').style.display = 'none'; });
 
     let interactTarget = null;
-    interactBtn.addEventListener('touchstart', (e) => {
-      e.preventDefault();
+    bindButton('interact-btn', () => {
       if (!interactTarget) return;
-
       if (interactTarget === 'key') {
-        hasKey = true;
-        scene.remove(keyMesh);
+        hasKey = true; scene.remove(keyMesh);
         document.getElementById('inventory-status').innerText = "[ CHAVE: CARTÃO VERMELHO ]";
         document.getElementById('inventory-status').style.color = "#33ff33";
         playSom('pegar');
-      } else if (interactTarget === 'door') {
-        if (hasKey) {
-          doorOpened = true;
-          playSom('porta');
-        }
-      } else if (interactTarget === 'elevator' && !elevatorMoving && currentChapter === 1) {
-        startElevatorDescent();
+      } else if (interactTarget === 'door' && hasKey) { doorOpened = true; playSom('porta'); }
+      else if (interactTarget === 'elevator' && !elevatorMoving && currentChapter === 1) {
+        elevatorMoving = true; elevatorLight.intensity = 2.0;
+        let descentInterval = setInterval(() => {
+          camera.position.y -= 0.12; elevatorCabin.position.y -= 0.12; elevatorLight.position.y -= 0.12;
+          if (Math.random() > 0.5) elevatorLight.intensity = elevatorLight.intensity > 0.5 ? 0.2 : 2.5;
+          if (camera.position.y <= -22.4) {
+            clearInterval(descentInterval); camera.position.y = -22.4; elevatorCabin.position.y = -24; elevatorMoving = false; elevatorLight.intensity = 0; currentChapter = 2;
+            monsterGroup.position.set(0, -24, -90);
+            document.getElementById('chapter-splash').style.display = 'block'; setTimeout(() => { document.getElementById('chapter-splash').style.display = 'none'; }, 3500);
+          }
+        }, 30);
       }
     });
 
-    function startElevatorDescent() {
-      elevatorMoving = true;
-      elevatorLight.intensity = 2.0;
-      let descentInterval = setInterval(() => {
-        camera.position.y -= 0.12;
-        elevatorCabin.position.y -= 0.12;
-        elevatorLight.position.y -= 0.12;
-
-        if (Math.random() > 0.5) elevatorLight.intensity = elevatorLight.intensity > 0.5 ? 0.2 : 2.5;
-
-        if (camera.position.y <= -22.4) {
-          clearInterval(descentInterval);
-          camera.position.y = -22.4;
-          elevatorCabin.position.y = -24;
-          elevatorMoving = false;
-          elevatorLight.intensity = 0;
-          currentChapter = 2;
-          monsterGroup.position.set(0, -24, -90);
-
-          document.getElementById('chapter-splash').style.display = 'block';
-          setTimeout(() => { document.getElementById('chapter-splash').style.display = 'none'; }, 3500);
-        }
-      }, 30);
-    }
-
-    // --- CONTROLES DE MOVIMENTO SEPARADOS ---
+    // --- CONTROLES MÓVEIS CORRIGIDOS ({ passive: false }) ---
     const zoneMove = document.getElementById('zone-move');
     const zoneLook = document.getElementById('zone-look');
     const knob = document.getElementById('joystick-knob');
@@ -428,47 +296,52 @@
 
     let joyTouchId = null;
     let lookTouchId = null;
-    let joyCenter = { x: 0, y: 0 };
+    let joyStart = { x: 0, y: 0 };
     let moveVector = { x: 0, y: 0 };
     let lookLast = { x: 0, y: 0 };
     let yaw = 0, pitch = 0;
 
-    // LADO ESQUERDO (ANDAR)
+    // Joystick Dinâmico (Flutuante)
     zoneMove.addEventListener('touchstart', (e) => {
       e.preventDefault();
       if (joyTouchId !== null) return;
       const t = e.changedTouches[0];
       joyTouchId = t.identifier;
       
-      const rect = joyContainer.getBoundingClientRect();
-      joyCenter.x = rect.left + rect.width / 2;
-      joyCenter.y = rect.top + rect.height / 2;
+      // Centraliza o analógico onde o dedo tocou!
+      joyStart.x = t.clientX;
+      joyStart.y = t.clientY;
+      joyContainer.style.left = (joyStart.x - 60) + 'px'; // 60 é metade da largura (120/2)
+      joyContainer.style.top = (joyStart.y - 60) + 'px';
+      joyContainer.style.bottom = 'auto'; // Desativa a ancoragem de baixo
+      
       handleJoyMove(t.clientX, t.clientY);
-    });
+    }, { passive: false });
 
     zoneMove.addEventListener('touchmove', (e) => {
       e.preventDefault();
       for (let t of e.changedTouches) {
         if (t.identifier === joyTouchId) handleJoyMove(t.clientX, t.clientY);
       }
-    });
+    }, { passive: false });
 
     const resetJoy = (e) => {
+      e.preventDefault();
       for (let t of e.changedTouches) {
         if (t.identifier === joyTouchId) {
-          joyTouchId = null;
-          moveVector = { x: 0, y: 0 };
-          knob.style.transform = `translate(-50%, -50%)`;
+          joyTouchId = null; moveVector = { x: 0, y: 0 }; knob.style.transform = `translate(-50%, -50%)`;
+          // Volta o analógico para a posição de espera
+          joyContainer.style.left = '25px'; joyContainer.style.bottom = '25px'; joyContainer.style.top = 'auto';
         }
       }
     };
-    zoneMove.addEventListener('touchend', resetJoy);
-    zoneMove.addEventListener('touchcancel', resetJoy);
+    zoneMove.addEventListener('touchend', resetJoy, { passive: false });
+    zoneMove.addEventListener('touchcancel', resetJoy, { passive: false });
 
     function handleJoyMove(clientX, clientY) {
       const maxDist = 50;
-      let dx = clientX - joyCenter.x;
-      let dy = clientY - joyCenter.y;
+      let dx = clientX - joyStart.x;
+      let dy = clientY - joyStart.y;
       const dist = Math.hypot(dx, dy);
       if (dist > maxDist) { dx = (dx / dist) * maxDist; dy = (dy / dist) * maxDist; }
       knob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
@@ -476,49 +349,35 @@
       moveVector.y = dy / maxDist;
     }
 
-    // LADO DIREITO (OLHAR)
+    // Controle de Câmera
     zoneLook.addEventListener('touchstart', (e) => {
       e.preventDefault();
       if (lookTouchId !== null) return;
       const t = e.changedTouches[0];
       lookTouchId = t.identifier;
-      lookLast.x = t.clientX;
-      lookLast.y = t.clientY;
-    });
+      lookLast.x = t.clientX; lookLast.y = t.clientY;
+    }, { passive: false });
 
     zoneLook.addEventListener('touchmove', (e) => {
       e.preventDefault();
       for (let t of e.changedTouches) {
         if (t.identifier === lookTouchId) {
-          const dx = t.clientX - lookLast.x;
-          const dy = t.clientY - lookLast.y;
-          yaw -= dx * 0.005;
-          pitch -= dy * 0.005;
+          yaw -= (t.clientX - lookLast.x) * 0.005;
+          pitch -= (t.clientY - lookLast.y) * 0.005;
           pitch = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, pitch));
-          lookLast.x = t.clientX;
-          lookLast.y = t.clientY;
+          lookLast.x = t.clientX; lookLast.y = t.clientY;
         }
       }
-    });
+    }, { passive: false });
 
-    const resetLook = (e) => {
-      for (let t of e.changedTouches) {
-        if (t.identifier === lookTouchId) lookTouchId = null;
-      }
-    };
-    zoneLook.addEventListener('touchend', resetLook);
-    zoneLook.addEventListener('touchcancel', resetLook);
+    const resetLook = (e) => { e.preventDefault(); for (let t of e.changedTouches) { if (t.identifier === lookTouchId) lookTouchId = null; } };
+    zoneLook.addEventListener('touchend', resetLook, { passive: false });
+    zoneLook.addEventListener('touchcancel', resetLook, { passive: false });
 
     function triggerDeath() {
-      if (dead) return;
-      dead = true;
+      if (dead) return; dead = true;
       document.getElementById('jumpscare').style.display = 'block';
-      setTimeout(() => {
-        document.getElementById('jumpscare').style.display = 'none';
-        camera.position.set(0, 1.6, 12);
-        monsterGroup.position.set(0, -6, -45);
-        dead = false;
-      }, 1500);
+      setTimeout(() => { document.getElementById('jumpscare').style.display = 'none'; camera.position.set(0, 1.6, 12); monsterGroup.position.set(0, -6, -45); dead = false; }, 1500);
     }
 
     // --- LOOP PRINCIPAL ---
@@ -529,10 +388,7 @@
 
     function animate() {
       requestAnimationFrame(animate);
-      if (!isGameStarted) {
-        renderer.render(scene, camera);
-        return;
-      }
+      if (!isGameStarted) { renderer.render(scene, camera); return; }
 
       camera.quaternion.setFromEuler(new THREE.Euler(pitch, yaw, 0, 'YXZ'));
       if (doorOpened && door.position.x < 3.8) door.position.x += 0.08;
@@ -546,10 +402,7 @@
         camera.position.addScaledVector(right, moveVector.x * 0.085);
 
         stepTimer++;
-        if (stepTimer > 22) {
-          playSom(camera.position.z < -20 ? 'metal' : 'passo');
-          stepTimer = 0;
-        }
+        if (stepTimer > 22) { playSom(camera.position.z < -20 ? 'metal' : 'passo'); stepTimer = 0; }
       }
 
       if (!elevatorMoving && !dead) {
@@ -558,25 +411,17 @@
           if (camera.position.z > -8) { targetY = 1.6; title.innerText = "CAPÍTULO 1 - RECEPÇÃO"; }
           else if (camera.position.z <= -8 && camera.position.z >= -24) { const t = (camera.position.z - (-8)) / (-16); targetY = 1.6 - (t * 6.0); title.innerText = "CAPÍTULO 1 - RAMPA"; }
           else { targetY = -4.4; title.innerText = "CAPÍTULO 1 - SUBSOLO"; }
-          camera.position.y += (targetY - camera.position.y) * 0.15;
-        } else {
-          targetY = -22.4; title.innerText = "CAPÍTULO 2 - ABISMO DOS PROTÓTIPOS";
-          camera.position.y += (targetY - camera.position.y) * 0.15;
-        }
+        } else { targetY = -22.4; title.innerText = "CAPÍTULO 2 - ABISMO DOS PROTÓTIPOS"; }
+        camera.position.y += (targetY - camera.position.y) * 0.15;
       }
 
       if (!isMonsterFrozen && !elevatorMoving && !dead) {
         monsterGroup.lookAt(camera.position.x, monsterGroup.position.y, camera.position.z);
-        const distToPlayer = monsterGroup.position.distanceTo(camera.position);
-        const inSameFloor = (currentChapter === 1 && camera.position.z < -18) || currentChapter === 2;
-
-        if (inSameFloor) {
+        if ((currentChapter === 1 && camera.position.z < -18) || currentChapter === 2) {
           const dir = new THREE.Vector3().subVectors(camera.position, monsterGroup.position).normalize();
-          monsterGroup.position.x += dir.x * 0.045;
-          monsterGroup.position.z += dir.z * 0.045;
-          armL.rotation.x = Math.sin(Date.now() * 0.008) * 0.4;
-          armR.rotation.x = -Math.sin(Date.now() * 0.008) * 0.4;
-          if (distToPlayer < 2.0) triggerDeath();
+          monsterGroup.position.x += dir.x * 0.045; monsterGroup.position.z += dir.z * 0.045;
+          armL.rotation.x = Math.sin(Date.now() * 0.008) * 0.4; armR.rotation.x = -Math.sin(Date.now() * 0.008) * 0.4;
+          if (monsterGroup.position.distanceTo(camera.position) < 2.0) triggerDeath();
         }
       }
 
@@ -585,27 +430,17 @@
       const hitDoor = !doorOpened ? raycaster.intersectObject(door) : [];
       const hitPanel = (currentChapter === 1 && !elevatorMoving) ? raycaster.intersectObject(elevatorPanel) : [];
 
-      if (hitKey.length > 0 && hitKey[0].distance < 3.5) {
-        interactTarget = 'key'; interactBtn.innerText = "PEGAR CHAVE"; interactBtn.style.display = 'flex';
-      } else if (hitDoor.length > 0 && hitDoor[0].distance < 4.0) {
-        interactTarget = 'door'; interactBtn.innerText = hasKey ? "ABRIR PORTA" : "[TRANCADA]"; interactBtn.style.display = 'flex';
-      } else if (hitPanel.length > 0 && hitPanel[0].distance < 4.5) {
-        interactTarget = 'elevator'; interactBtn.innerText = "DESCER ELEVADOR"; interactBtn.style.display = 'flex';
-      } else {
-        interactTarget = null; interactBtn.style.display = 'none';
-      }
+      if (hitKey.length > 0 && hitKey[0].distance < 3.5) { interactTarget = 'key'; interactBtn.innerText = "PEGAR CHAVE"; interactBtn.style.display = 'flex'; }
+      else if (hitDoor.length > 0 && hitDoor[0].distance < 4.0) { interactTarget = 'door'; interactBtn.innerText = hasKey ? "ABRIR PORTA" : "[TRANCADA]"; interactBtn.style.display = 'flex'; }
+      else if (hitPanel.length > 0 && hitPanel[0].distance < 4.5) { interactTarget = 'elevator'; interactBtn.innerText = "DESCER ELEVADOR"; interactBtn.style.display = 'flex'; }
+      else { interactTarget = null; interactBtn.style.display = 'none'; }
 
       renderer.render(scene, camera);
     }
     animate();
 
-    function onWindowResize() {
-      camera.aspect = window.innerWidth / window.innerHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
-    }
-    window.addEventListener('resize', onWindowResize);
-    window.addEventListener('orientationchange', () => setTimeout(onWindowResize, 200));
+    function onWindowResize() { camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); }
+    window.addEventListener('resize', onWindowResize); window.addEventListener('orientationchange', () => setTimeout(onWindowResize, 200));
   </script>
 </body>
 </html>
