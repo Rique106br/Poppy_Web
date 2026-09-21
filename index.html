@@ -3,12 +3,23 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Playtime: Capítulo 1 & 2 - Lanterna Fix</title>
+  <title>Playtime: Capítulo 1 & 2 - Tela Cheia Fix</title>
   <style>
     /* Reset total de eventos nativos do navegador */
     * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
     html, body { width: 100%; height: 100%; overflow: hidden; background: #000; font-family: 'Courier New', Courier, monospace; touch-action: none; }
     
+    /* FORÇAR O JOGO A PREENCHER A TELA SEMPRE */
+    canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vw !important;
+      height: 100vh !important;
+      z-index: 1;
+      display: block;
+    }
+
     /* Zonas de Toque (Ocultas até o jogo iniciar) */
     #zone-move { position: absolute; top: 0; left: 0; width: 50vw; height: 100vh; z-index: 5; display: none; }
     #zone-look { position: absolute; top: 0; right: 0; width: 50vw; height: 100vh; z-index: 5; display: none; }
@@ -48,8 +59,8 @@
       display: flex; flex-direction: column; align-items: center; gap: 3px;
       z-index: 10; pointer-events: none;
     }
-    #zone-title { color: #aaa; font-size: 11px; letter-spacing: 2px; }
-    #inventory-status { color: #ff4444; font-size: 11px; letter-spacing: 1px; }
+    #zone-title { color: #aaa; font-size: 11px; letter-spacing: 2px; text-shadow: 1px 1px 2px #000; }
+    #inventory-status { color: #ff4444; font-size: 11px; letter-spacing: 1px; text-shadow: 1px 1px 2px #000; }
 
     #top-bar { position: absolute; top: 12px; right: 12px; display: flex; gap: 8px; z-index: 30; display: none; }
     .hud-btn { background: rgba(0,0,0,0.6); border: 1px solid #777; color: #fff; font-size: 10px; font-family: inherit; padding: 10px 14px; border-radius: 4px; }
@@ -88,7 +99,7 @@
 <body>
   <div id="start-overlay">
     <h1>PLAYTIME CO.</h1>
-    <p>A lanterna foi consertada. Explore as instalações inferiores.</p>
+    <p>A tela cheia foi estabilizada. O jogo preencherá todo o espaço.</p>
     <label class="debug-box"><input type="checkbox" id="debug-checkbox" checked> MODO DEBUG: CONGELAR BICHO</label>
     <button id="start-btn">INICIAR JOGO</button>
   </div>
@@ -164,7 +175,7 @@
       osc.connect(gain); gain.connect(audioCtx.destination); osc.start(now);
     }
 
-    // --- CENA THREE.JS E LANTERNA CORRIGIDA ---
+    // --- CENA THREE.JS ---
     const scene = new THREE.Scene();
     scene.fog = new THREE.FogExp2(0x06060c, 0.04);
 
@@ -174,14 +185,14 @@
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     document.body.appendChild(renderer.domElement);
 
-    const ambientLight = new THREE.AmbientLight(0x2a2a38, 0.9);
+    // LUZES AUMENTADAS PARA EVITAR ESCURIDÃO TOTAL
+    const ambientLight = new THREE.AmbientLight(0x2a2a38, 1.2);
     scene.add(ambientLight);
 
-    // CORREÇÃO: Lanterna aponta para um alvo colado à câmara na parte da frente
-    const flashlight = new THREE.SpotLight(0xffeedd, 4.0, 40, Math.PI / 5, 0.5, 1);
+    const flashlight = new THREE.SpotLight(0xffeedd, 4.0, 40, Math.PI / 4.5, 0.5, 1);
     flashlight.position.set(0, 0, 0);
     camera.add(flashlight);
-    flashlight.target.position.set(0, 0, -1); // Aponta para a frente da câmara
+    flashlight.target.position.set(0, 0, -1);
     camera.add(flashlight.target);
     scene.add(camera);
 
@@ -253,11 +264,20 @@
       document.getElementById('top-bar').style.display = 'flex';
       document.getElementById('hud-info').style.display = 'flex';
       
-      initAudio(); activateImmersiveMode(); setTimeout(onWindowResize, 300);
+      initAudio(); 
+      activateImmersiveMode(); 
+      // Força redimensionamento imediato e depois de um momento
+      onWindowResize();
+      setTimeout(onWindowResize, 300);
       isGameStarted = true;
     });
 
-    bindButton('btn-fullscreen', () => { activateImmersiveMode(); setTimeout(onWindowResize, 300); });
+    bindButton('btn-fullscreen', () => { 
+      activateImmersiveMode(); 
+      onWindowResize();
+      setTimeout(onWindowResize, 300); 
+    });
+    
     bindButton('debug-toggle', () => { isMonsterFrozen = !isMonsterFrozen; updateDebugButton(); });
     bindButton('note-close', () => { document.getElementById('note-modal').style.display = 'none'; });
 
@@ -430,8 +450,18 @@
     }
     animate();
 
-    function onWindowResize() { camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); }
-    window.addEventListener('resize', onWindowResize); window.addEventListener('orientationchange', () => setTimeout(onWindowResize, 200));
+    // Redimensionamento robusto da janela (evita cortes pretos)
+    function onWindowResize() { 
+      if(!camera || !renderer) return;
+      camera.aspect = window.innerWidth / window.innerHeight; 
+      camera.updateProjectionMatrix(); 
+      renderer.setSize(window.innerWidth, window.innerHeight); 
+    }
+    window.addEventListener('resize', onWindowResize); 
+    window.addEventListener('orientationchange', () => {
+      setTimeout(onWindowResize, 100);
+      setTimeout(onWindowResize, 500); // Garante que a tela atualizou ao girar o telemóvel
+    });
   </script>
 </body>
 </html>
