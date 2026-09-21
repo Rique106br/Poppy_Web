@@ -3,26 +3,27 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Playtime: Capítulo 1 & 2</title>
+  <title>Playtime: Capítulo 1 & 2 - Fix</title>
   <style>
-    * { box-sizing: border-box; touch-action: none; margin: 0; padding: 0; }
-    html, body { width: 100%; height: 100%; overflow: hidden; background: #000; font-family: 'Courier New', Courier, monospace; user-select: none; }
+    /* Reset sem bloquear cliques globais */
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #000; font-family: 'Courier New', Courier, monospace; }
     
-    /* Zonas de Toque Divididas */
-    #zone-move { position: absolute; top: 0; left: 0; width: 50vw; height: 100vh; z-index: 5; }
-    #zone-look { position: absolute; top: 0; right: 0; width: 50vw; height: 100vh; z-index: 5; }
+    /* Zonas de Toque Divididas (Ocultas até o jogo iniciar) */
+    #zone-move { position: absolute; top: 0; left: 0; width: 50vw; height: 100vh; z-index: 5; touch-action: none; display: none; }
+    #zone-look { position: absolute; top: 0; right: 0; width: 50vw; height: 100vh; z-index: 5; touch-action: none; display: none; }
 
     #crosshair {
       position: absolute; top: 50%; left: 50%; width: 6px; height: 6px;
       background: #fff; border-radius: 50%; transform: translate(-50%, -50%);
-      pointer-events: none; z-index: 10;
+      pointer-events: none; z-index: 10; display: none;
     }
     
     /* Joystick Analógico */
     #joystick-container {
       position: absolute; bottom: 25px; left: 25px; width: 120px; height: 120px;
       background: rgba(255, 255, 255, 0.1); border: 2px solid rgba(255, 255, 255, 0.3);
-      border-radius: 50%; z-index: 6; pointer-events: none;
+      border-radius: 50%; z-index: 6; pointer-events: none; display: none;
     }
     #joystick-knob {
       position: absolute; top: 50%; left: 50%; width: 50px; height: 50px;
@@ -36,6 +37,7 @@
       background: rgba(255, 204, 0, 0.25); border: 2px solid #ffcc00; border-radius: 50%;
       color: #ffcc00; font-weight: bold; font-size: 11px; z-index: 20;
       display: none; align-items: center; justify-content: center; text-align: center;
+      touch-action: manipulation;
     }
     #interact-btn:active { background: rgba(255, 204, 0, 0.6); }
 
@@ -49,11 +51,12 @@
     #inventory-status { color: #ff4444; font-size: 11px; letter-spacing: 1px; }
 
     #top-bar {
-      position: absolute; top: 12px; right: 12px; display: flex; gap: 8px; z-index: 30;
+      position: absolute; top: 12px; right: 12px; display: flex; gap: 8px; z-index: 30; display: none;
     }
     .hud-btn {
       background: rgba(0,0,0,0.6); border: 1px solid #777; color: #fff;
       font-size: 10px; font-family: inherit; padding: 10px 14px; border-radius: 4px;
+      touch-action: manipulation;
     }
     #debug-toggle { border-color: #00ff88; color: #00ff88; }
 
@@ -89,6 +92,7 @@
     #start-btn {
       padding: 16px 36px; background: #ffcc00; color: #000; border: none;
       font-weight: bold; font-family: inherit; font-size: 16px; border-radius: 4px; box-shadow: 0 0 10px rgba(255, 204, 0, 0.5);
+      touch-action: manipulation;
     }
     #start-btn:active { background: #e6b800; transform: scale(0.95); }
 
@@ -108,7 +112,7 @@
   <!-- Tela de Inicialização -->
   <div id="start-overlay">
     <h1>PLAYTIME CO.</h1>
-    <p>Use o lado ESQUERDO para andar e o DIREITO para olhar.</p>
+    <p>Toque para entrar. Use a METADE ESQUERDA da tela para andar e a METADE DIREITA para olhar.</p>
     
     <label class="debug-box">
       <input type="checkbox" id="debug-checkbox" checked>
@@ -120,7 +124,7 @@
 
   <div id="jumpscare"></div>
 
-  <!-- Zonas de Toque Invisíveis -->
+  <!-- Zonas de Toque (Ocultas na tela inicial) -->
   <div id="zone-move"></div>
   <div id="zone-look"></div>
 
@@ -137,7 +141,7 @@
     <button id="debug-toggle" class="hud-btn">DEBUG: TRAVADO</button>
   </div>
 
-  <div id="hud-info">
+  <div id="hud-info" style="display:none;">
     <div id="zone-title">CAPÍTULO 1 - RECEPÇÃO</div>
     <div id="inventory-status">[ CHAVE: NENHUMA ]</div>
   </div>
@@ -151,34 +155,6 @@
   </div>
 
   <script>
-    // --- FUNÇÃO PARA BIND SEGURO DE BOTÕES NO MOBILE ---
-    function bindButton(id, callback) {
-      const btn = document.getElementById(id);
-      if(!btn) return;
-      btn.addEventListener('touchstart', (e) => {
-        e.preventDefault(); // Impede o clique fantasma
-        e.stopPropagation(); // Impede de ativar o joystick/câmara
-        callback();
-      }, { passive: false });
-      
-      btn.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        callback();
-      });
-    }
-
-    // --- ATIVAÇÃO DE TELA CHEIA ---
-    async function activateImmersiveMode() {
-      try {
-        if (!document.fullscreenElement) {
-          if (document.documentElement.requestFullscreen) await document.documentElement.requestFullscreen();
-          else if (document.documentElement.webkitRequestFullscreen) await document.documentElement.webkitRequestFullscreen();
-        }
-        if (screen.orientation && screen.orientation.lock) await screen.orientation.lock('landscape').catch(()=>{});
-      } catch (err) {}
-    }
-
     // --- ESTADOS DO JOGO ---
     let isMonsterFrozen = true;
     let hasKey = false;
@@ -186,6 +162,7 @@
     let elevatorMoving = false;
     let currentChapter = 1;
     let dead = false;
+    let isGameStarted = false;
 
     // --- MOTOR DE ÁUDIO NATIVO ---
     let audioCtx = null;
@@ -299,7 +276,6 @@
     elevatorCabin.position.set(0, -6, -57);
     scene.add(elevatorCabin);
 
-    // Capítulo 2 Floor
     const deepFloor = new THREE.Mesh(new THREE.PlaneGeometry(40, 50), matDeepFloor);
     deepFloor.rotation.x = -Math.PI / 2;
     deepFloor.position.set(0, -24, -80);
@@ -330,10 +306,13 @@
     monsterGroup.position.set(0, -6, -45);
     scene.add(monsterGroup);
 
-    // --- LIGAÇÃO DOS BOTÕES DA INTERFACE ---
-    const debugToggle = document.getElementById('debug-toggle');
+    // --- MENUS E BOTÕES (INTERFACE) ---
+    const startBtn = document.getElementById('start-btn');
     const startOverlay = document.getElementById('start-overlay');
-    const noteModal = document.getElementById('note-modal');
+    const debugToggle = document.getElementById('debug-toggle');
+    const btnFullscreen = document.getElementById('btn-fullscreen');
+    const interactBtn = document.getElementById('interact-btn');
+    const noteCloseBtn = document.getElementById('note-close');
 
     function updateDebugButton() {
       if (isMonsterFrozen) {
@@ -347,31 +326,57 @@
       }
     }
 
-    bindButton('start-btn', () => {
-      startOverlay.style.display = 'none';
-      initAudio();
-      activateImmersiveMode();
+    startBtn.onclick = async () => {
       isMonsterFrozen = document.getElementById('debug-checkbox').checked;
       updateDebugButton();
-      setTimeout(onWindowResize, 300);
-    });
+      
+      startOverlay.style.display = 'none';
+      
+      // Mostrar HUD do Jogo e Zonas de Toque
+      document.getElementById('zone-move').style.display = 'block';
+      document.getElementById('zone-look').style.display = 'block';
+      document.getElementById('crosshair').style.display = 'block';
+      document.getElementById('joystick-container').style.display = 'block';
+      document.getElementById('top-bar').style.display = 'flex';
+      document.getElementById('hud-info').style.display = 'flex';
+      
+      initAudio();
+      
+      try {
+        if (!document.fullscreenElement) {
+          if (document.documentElement.requestFullscreen) await document.documentElement.requestFullscreen();
+          else if (document.documentElement.webkitRequestFullscreen) await document.documentElement.webkitRequestFullscreen();
+        }
+        if (screen.orientation && screen.orientation.lock) await screen.orientation.lock('landscape').catch(()=>{});
+      } catch (err) {}
 
-    bindButton('btn-fullscreen', () => {
-      activateImmersiveMode();
       setTimeout(onWindowResize, 300);
-    });
+      isGameStarted = true;
+    };
 
-    bindButton('debug-toggle', () => {
+    btnFullscreen.onclick = async () => {
+      try {
+        if (!document.fullscreenElement) {
+          if (document.documentElement.requestFullscreen) await document.documentElement.requestFullscreen();
+          else if (document.documentElement.webkitRequestFullscreen) await document.documentElement.webkitRequestFullscreen();
+        }
+        if (screen.orientation && screen.orientation.lock) await screen.orientation.lock('landscape').catch(()=>{});
+      } catch (err) {}
+      setTimeout(onWindowResize, 300);
+    };
+
+    debugToggle.onclick = () => {
       isMonsterFrozen = !isMonsterFrozen;
       updateDebugButton();
-    });
+    };
 
-    bindButton('note-close', () => {
-      noteModal.style.display = 'none';
-    });
+    noteCloseBtn.onclick = () => {
+      document.getElementById('note-modal').style.display = 'none';
+    };
 
     let interactTarget = null;
-    bindButton('interact-btn', () => {
+    interactBtn.addEventListener('touchstart', (e) => {
+      e.preventDefault();
       if (!interactTarget) return;
 
       if (interactTarget === 'key') {
@@ -393,7 +398,6 @@
     function startElevatorDescent() {
       elevatorMoving = true;
       elevatorLight.intensity = 2.0;
-
       let descentInterval = setInterval(() => {
         camera.position.y -= 0.12;
         elevatorCabin.position.y -= 0.12;
@@ -440,14 +444,14 @@
       joyCenter.x = rect.left + rect.width / 2;
       joyCenter.y = rect.top + rect.height / 2;
       handleJoyMove(t.clientX, t.clientY);
-    }, { passive: false });
+    });
 
     zoneMove.addEventListener('touchmove', (e) => {
       e.preventDefault();
       for (let t of e.changedTouches) {
         if (t.identifier === joyTouchId) handleJoyMove(t.clientX, t.clientY);
       }
-    }, { passive: false });
+    });
 
     const resetJoy = (e) => {
       for (let t of e.changedTouches) {
@@ -466,11 +470,7 @@
       let dx = clientX - joyCenter.x;
       let dy = clientY - joyCenter.y;
       const dist = Math.hypot(dx, dy);
-
-      if (dist > maxDist) {
-        dx = (dx / dist) * maxDist;
-        dy = (dy / dist) * maxDist;
-      }
+      if (dist > maxDist) { dx = (dx / dist) * maxDist; dy = (dy / dist) * maxDist; }
       knob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
       moveVector.x = dx / maxDist;
       moveVector.y = dy / maxDist;
@@ -484,7 +484,7 @@
       lookTouchId = t.identifier;
       lookLast.x = t.clientX;
       lookLast.y = t.clientY;
-    }, { passive: false });
+    });
 
     zoneLook.addEventListener('touchmove', (e) => {
       e.preventDefault();
@@ -499,7 +499,7 @@
           lookLast.y = t.clientY;
         }
       }
-    }, { passive: false });
+    });
 
     const resetLook = (e) => {
       for (let t of e.changedTouches) {
@@ -513,7 +513,6 @@
       if (dead) return;
       dead = true;
       document.getElementById('jumpscare').style.display = 'block';
-
       setTimeout(() => {
         document.getElementById('jumpscare').style.display = 'none';
         camera.position.set(0, 1.6, 12);
@@ -526,11 +525,15 @@
     camera.position.set(0, 1.6, 12);
     let stepTimer = 0;
     const raycaster = new THREE.Raycaster();
-    const interactBtn = document.getElementById('interact-btn');
     const title = document.getElementById('zone-title');
 
     function animate() {
       requestAnimationFrame(animate);
+      if (!isGameStarted) {
+        renderer.render(scene, camera);
+        return;
+      }
+
       camera.quaternion.setFromEuler(new THREE.Euler(pitch, yaw, 0, 'YXZ'));
       if (doorOpened && door.position.x < 3.8) door.position.x += 0.08;
 
@@ -577,7 +580,6 @@
         }
       }
 
-      // RAYCASTING MIRA
       raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
       const hitKey = !hasKey ? raycaster.intersectObject(keyMesh) : [];
       const hitDoor = !doorOpened ? raycaster.intersectObject(door) : [];
@@ -604,1880 +606,6 @@
     }
     window.addEventListener('resize', onWindowResize);
     window.addEventListener('orientationchange', () => setTimeout(onWindowResize, 200));
-  </script>
-</body>
-</html>
-    #jumpscare {
-      position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
-      background: #ff0000; display: none; z-index: 200;
-    }
-  </style>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-</head>
-<body>
-  <!-- Tela de Inicialização -->
-  <div id="start-overlay">
-    <h1>PLAYTIME CO.</h1>
-    <p>Toque para entrar. Use o lado ESQUERDO para andar e o DIREITO para olhar.</p>
-    
-    <label class="debug-box">
-      <input type="checkbox" id="debug-checkbox" checked>
-      MODO DEBUG: CONGELAR BICHO
-    </label>
-
-    <button id="start-btn">INICIAR JOGO</button>
-  </div>
-
-  <div id="jumpscare"></div>
-
-  <!-- Zonas de Toque Invisíveis -->
-  <div id="zone-move"></div>
-  <div id="zone-look"></div>
-
-  <!-- Elementos de Controlo -->
-  <div id="joystick-container">
-    <div id="joystick-knob"></div>
-  </div>
-  <button id="interact-btn">INTERAGIR</button>
-
-  <div id="crosshair"></div>
-  
-  <div id="top-bar">
-    <button id="btn-fullscreen" class="hud-btn">⛶ TELA CHEIA</button>
-    <button id="debug-toggle" class="hud-btn">DEBUG: TRAVADO</button>
-  </div>
-
-  <div id="hud-info">
-    <div id="zone-title">CAPÍTULO 1 - RECEPÇÃO</div>
-    <div id="inventory-status">[ CHAVE: NENHUMA ]</div>
-  </div>
-
-  <div id="chapter-splash">CAPÍTULO 2<br><span style="font-size: 13px; color:#aaa;">O ABISMO DOS PROTÓTIPOS</span></div>
-
-  <div id="note-modal">
-    <div id="note-title">REGISTRO INTERNO</div>
-    <div id="note-body">...</div>
-    <button id="note-close">FECHAR REGISTRO</button>
-  </div>
-
-  <script>
-    // --- ATIVAÇÃO DE TELA CHEIA E MODO PAISAGEM ---
-    async function activateImmersiveMode() {
-      try {
-        if (!document.fullscreenElement) {
-          if (document.documentElement.requestFullscreen) {
-            await document.documentElement.requestFullscreen();
-          } else if (document.documentElement.webkitRequestFullscreen) {
-            await document.documentElement.webkitRequestFullscreen();
-          }
-        }
-        if (screen.orientation && screen.orientation.lock) {
-          await screen.orientation.lock('landscape').catch(() => {});
-        }
-      } catch (err) {}
-    }
-
-    // --- ESTADOS DO JOGO ---
-    let isMonsterFrozen = true;
-    let hasKey = false;
-    let doorOpened = false;
-    let elevatorMoving = false;
-    let currentChapter = 1;
-    let dead = false;
-
-    // --- MOTOR DE ÁUDIO NATIVO ---
-    let audioCtx = null;
-    function initAudio() {
-      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      if (audioCtx.state === 'suspended') audioCtx.resume();
-    }
-
-    function playFootstep(type) {
-      if (!audioCtx) return;
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      const now = audioCtx.currentTime;
-
-      if (type === 'water') {
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(260, now);
-        osc.frequency.exponentialRampToValueAtTime(70, now + 0.1);
-        gain.gain.setValueAtTime(0.12, now);
-      } else {
-        osc.type = type === 'metal' ? 'triangle' : 'sine';
-        osc.frequency.setValueAtTime(type === 'metal' ? 80 : 130, now);
-        osc.frequency.exponentialRampToValueAtTime(type === 'metal' ? 30 : 40, now + 0.1);
-        gain.gain.setValueAtTime(0.15, now);
-      }
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-      osc.start(now);
-      osc.stop(now + 0.15);
-    }
-
-    function playDoorOpen() {
-      if (!audioCtx) return;
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      const now = audioCtx.currentTime;
-      osc.type = 'square';
-      osc.frequency.setValueAtTime(140, now);
-      osc.frequency.exponentialRampToValueAtTime(60, now + 0.4);
-      gain.gain.setValueAtTime(0.15, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-      osc.start(now);
-      osc.stop(now + 0.5);
-    }
-
-    function playPickup() {
-      if (!audioCtx) return;
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      const now = audioCtx.currentTime;
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(440, now);
-      osc.frequency.exponentialRampToValueAtTime(880, now + 0.2);
-      gain.gain.setValueAtTime(0.2, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-      osc.start(now);
-      osc.stop(now + 0.25);
-    }
-
-    function playElevatorHum() {
-      if (!audioCtx) return;
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      const now = audioCtx.currentTime;
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(40, now);
-      osc.frequency.linearRampToValueAtTime(55, now + 3);
-      gain.gain.setValueAtTime(0.2, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 5.0);
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-      osc.start(now);
-      osc.stop(now + 5.2);
-    }
-
-    function playMonsterRoar() {
-      if (!audioCtx) return;
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      const now = audioCtx.currentTime;
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(70, now);
-      osc.frequency.linearRampToValueAtTime(30, now + 1.2);
-      gain.gain.setValueAtTime(0.4, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 1.25);
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-      osc.start(now);
-      osc.stop(now + 1.3);
-    }
-
-    // --- CENA THREE.JS ---
-    const scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0x06060c, 0.04);
-
-    const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 80);
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    document.body.appendChild(renderer.domElement);
-
-    const ambientLight = new THREE.AmbientLight(0x2a2a38, 0.9);
-    scene.add(ambientLight);
-
-    const flashlight = new THREE.SpotLight(0xffeedd, 3.5, 32, Math.PI / 4.5, 0.4);
-    camera.add(flashlight);
-    flashlight.position.set(0, 0, 0);
-    flashlight.target = camera;
-    scene.add(camera);
-
-    const shopBulb = new THREE.PointLight(0xffbb66, 1.2, 18);
-    shopBulb.position.set(0, 4, 10);
-    scene.add(shopBulb);
-
-    const elevatorLight = new THREE.PointLight(0xff1100, 0, 10);
-    elevatorLight.position.set(0, -4.5, -57);
-    scene.add(elevatorLight);
-
-    // Materiais
-    const matWood = new THREE.MeshStandardMaterial({ color: 0x4a3424, roughness: 0.7 });
-    const matWallStore = new THREE.MeshStandardMaterial({ color: 0x3d4b58, roughness: 0.8 });
-    const matConcrete = new THREE.MeshStandardMaterial({ color: 0x222226, roughness: 0.9 });
-    const matMetal = new THREE.MeshStandardMaterial({ color: 0x4d4d5a, metalness: 0.8, roughness: 0.3 });
-    const matDeepFloor = new THREE.MeshStandardMaterial({ color: 0x12151a, roughness: 0.3, metalness: 0.4 });
-
-    // CAPÍTULO 1
-    const shopFloor = new THREE.Mesh(new THREE.PlaneGeometry(24, 30), matWood);
-    shopFloor.rotation.x = -Math.PI / 2;
-    shopFloor.position.set(0, 0, 5);
-    scene.add(shopFloor);
-
-    function createWall(w, h, d, x, y, z) {
-      const wall = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), matWallStore);
-      wall.position.set(x, y, z);
-      scene.add(wall);
-    }
-    createWall(24, 6, 0.5, 0, 3, 20);
-    createWall(0.5, 6, 30, -12, 3, 5);
-    createWall(0.5, 6, 30, 12, 3, 5);
-
-    const counter = new THREE.Mesh(new THREE.BoxGeometry(6, 1.1, 1.6), new THREE.MeshStandardMaterial({ color: 0xba813a }));
-    counter.position.set(0, 0.55, 14);
-    scene.add(counter);
-
-    const ramp = new THREE.Mesh(new THREE.PlaneGeometry(8, 16), matConcrete);
-    ramp.rotation.x = -Math.PI / 2 + 0.375;
-    ramp.position.set(0, -3, -16);
-    scene.add(ramp);
-
-    const subFloor = new THREE.Mesh(new THREE.PlaneGeometry(30, 30), matConcrete);
-    subFloor.rotation.x = -Math.PI / 2;
-    subFloor.position.set(0, -6, -37);
-    scene.add(subFloor);
-
-    const desk = new THREE.Mesh(new THREE.BoxGeometry(3, 1, 1.5), matMetal);
-    desk.position.set(8, -5.5, -40);
-    scene.add(desk);
-
-    const keyMesh = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.05, 0.5), new THREE.MeshBasicMaterial({ color: 0xff1122 }));
-    keyMesh.position.set(8, -4.95, -40);
-    scene.add(keyMesh);
-
-    const wallElevatorBack = new THREE.Mesh(new THREE.BoxGeometry(30, 8, 0.8), matMetal);
-    wallElevatorBack.position.set(0, -2, -52);
-    scene.add(wallElevatorBack);
-
-    const door = new THREE.Mesh(new THREE.BoxGeometry(4, 5, 0.4), new THREE.MeshStandardMaterial({ color: 0x882222, metalness: 0.7 }));
-    door.position.set(0, -3.5, -51.8);
-    scene.add(door);
-
-    const elevatorPanel = new THREE.Mesh(new THREE.BoxGeometry(0.6, 1.0, 0.2), new THREE.MeshBasicMaterial({ color: 0x33ff33 }));
-    elevatorPanel.position.set(2.5, -4.0, -57);
-    scene.add(elevatorPanel);
-
-    const elevatorCabin = new THREE.Group();
-    const elevFloor = new THREE.Mesh(new THREE.PlaneGeometry(6, 6), matMetal);
-    elevFloor.rotation.x = -Math.PI / 2;
-    elevatorCabin.add(elevFloor);
-    elevatorCabin.position.set(0, -6, -57);
-    scene.add(elevatorCabin);
-
-    // CAPÍTULO 2
-    const deepFloor = new THREE.Mesh(new THREE.PlaneGeometry(40, 50), matDeepFloor);
-    deepFloor.rotation.x = -Math.PI / 2;
-    deepFloor.position.set(0, -24, -80);
-    scene.add(deepFloor);
-
-    for (let r = -1; r <= 1; r += 2) {
-      const rail = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.15, 45), matMetal);
-      rail.position.set(r * 1.5, -23.9, -80);
-      scene.add(rail);
-    }
-
-    // CRIATURA
-    const monsterGroup = new THREE.Group();
-    const matMonsterBody = new THREE.MeshStandardMaterial({ color: 0x0e2f59, roughness: 0.9 });
-    const matEye = new THREE.MeshBasicMaterial({ color: 0xffffff });
-    const matMouth = new THREE.MeshBasicMaterial({ color: 0x660000 });
-
-    const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.25, 2.2, 8), matMonsterBody);
-    torso.position.y = 2.0;
-    monsterGroup.add(torso);
-
-    const head = new THREE.Mesh(new THREE.SphereGeometry(0.45, 8, 8), matMonsterBody);
-    head.position.y = 3.3;
-    monsterGroup.add(head);
-
-    const eye1 = new THREE.Mesh(new THREE.SphereGeometry(0.08, 6, 6), matEye);
-    eye1.position.set(0.18, 3.4, 0.38);
-    const eye2 = eye1.clone();
-    eye2.position.x = -0.18;
-    monsterGroup.add(eye1);
-    monsterGroup.add(eye2);
-
-    const mouth = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.15, 0.1), matMouth);
-    mouth.position.set(0, 3.15, 0.4);
-    monsterGroup.add(mouth);
-
-    const armL = new THREE.Mesh(new THREE.BoxGeometry(0.15, 2.5, 0.15), matMonsterBody);
-    armL.position.set(0.55, 1.8, 0);
-    const armR = armL.clone();
-    armR.position.x = -0.55;
-    monsterGroup.add(armL);
-    monsterGroup.add(armR);
-
-    monsterGroup.position.set(0, -6, -45);
-    scene.add(monsterGroup);
-
-    // NOTAS
-    const notes = [];
-    const noteGeo = new THREE.PlaneGeometry(0.4, 0.55);
-    const noteMat = new THREE.MeshBasicMaterial({ color: 0xfff3db, side: THREE.DoubleSide });
-
-    function addNote(x, y, z, rotX, rotY, title, text) {
-      const mesh = new THREE.Mesh(noteGeo, noteMat);
-      mesh.position.set(x, y, z);
-      mesh.rotation.x = rotX;
-      mesh.rotation.y = rotY;
-      scene.add(mesh);
-      notes.push({ mesh, title, text });
-    }
-
-    addNote(0.5, 1.12, 14, -Math.PI / 2, 0.2, 
-      "ORDEM DE EVACUAÇÃO - 1994",
-      "Tranquem a recepção. A chave vermelha foi guardada na bancada de manutenção do subsolo."
-    );
-
-    addNote(7.5, -4.95, -40, -Math.PI / 2, 0,
-      "ACESSO AO SETOR B",
-      "Pegue o cartão vermelho sobre a mesa para destravar a porta de aço do elevador."
-    );
-
-    // --- CONTROLOS MULTITOUCH REFEITOS (SEPARADOS) ---
-    const zoneMove = document.getElementById('zone-move');
-    const zoneLook = document.getElementById('zone-look');
-    const knob = document.getElementById('joystick-knob');
-    const joyContainer = document.getElementById('joystick-container');
-
-    let joyTouchId = null;
-    let lookTouchId = null;
-    let joyCenter = { x: 0, y: 0 };
-    let moveVector = { x: 0, y: 0 };
-    let lookLast = { x: 0, y: 0 };
-    let yaw = 0, pitch = 0;
-
-    // 1. ZONA DO ANALÓGICO (ESQUERDA)
-    zoneMove.addEventListener('touchstart', (e) => {
-      e.preventDefault();
-      if (joyTouchId !== null) return;
-      const t = e.changedTouches[0];
-      joyTouchId = t.identifier;
-      
-      const rect = joyContainer.getBoundingClientRect();
-      joyCenter.x = rect.left + rect.width / 2;
-      joyCenter.y = rect.top + rect.height / 2;
-      handleJoyMove(t.clientX, t.clientY);
-    });
-
-    zoneMove.addEventListener('touchmove', (e) => {
-      e.preventDefault();
-      for (let t of e.changedTouches) {
-        if (t.identifier === joyTouchId) {
-          handleJoyMove(t.clientX, t.clientY);
-        }
-      }
-    });
-
-    const resetJoy = (e) => {
-      for (let t of e.changedTouches) {
-        if (t.identifier === joyTouchId) {
-          joyTouchId = null;
-          moveVector = { x: 0, y: 0 };
-          knob.style.transform = `translate(-50%, -50%)`;
-        }
-      }
-    };
-    zoneMove.addEventListener('touchend', resetJoy);
-    zoneMove.addEventListener('touchcancel', resetJoy);
-
-    function handleJoyMove(clientX, clientY) {
-      const maxDist = 50;
-      let dx = clientX - joyCenter.x;
-      let dy = clientY - joyCenter.y;
-      const dist = Math.hypot(dx, dy);
-
-      if (dist > maxDist) {
-        dx = (dx / dist) * maxDist;
-        dy = (dy / dist) * maxDist;
-      }
-      knob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
-      moveVector.x = dx / maxDist;
-      moveVector.y = dy / maxDist;
-    }
-
-    // 2. ZONA DE OLHAR (DIREITA)
-    zoneLook.addEventListener('touchstart', (e) => {
-      e.preventDefault();
-      if (lookTouchId !== null) return;
-      const t = e.changedTouches[0];
-      lookTouchId = t.identifier;
-      lookLast.x = t.clientX;
-      lookLast.y = t.clientY;
-    });
-
-    zoneLook.addEventListener('touchmove', (e) => {
-      e.preventDefault();
-      for (let t of e.changedTouches) {
-        if (t.identifier === lookTouchId) {
-          const dx = t.clientX - lookLast.x;
-          const dy = t.clientY - lookLast.y;
-          yaw -= dx * 0.005;
-          pitch -= dy * 0.005;
-          pitch = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, pitch));
-          lookLast.x = t.clientX;
-          lookLast.y = t.clientY;
-        }
-      }
-    });
-
-    const resetLook = (e) => {
-      for (let t of e.changedTouches) {
-        if (t.identifier === lookTouchId) lookTouchId = null;
-      }
-    };
-    zoneLook.addEventListener('touchend', resetLook);
-    zoneLook.addEventListener('touchcancel', resetLook);
-
-    // --- INTERAÇÕES HUD E BOTÕES ---
-    const raycaster = new THREE.Raycaster();
-    const interactBtn = document.getElementById('interact-btn');
-    const noteModal = document.getElementById('note-modal');
-    const noteTitle = document.getElementById('note-title');
-    const noteBody = document.getElementById('note-body');
-    const noteClose = document.getElementById('note-close');
-    const invStatus = document.getElementById('inventory-status');
-    const title = document.getElementById('zone-title');
-    const chapterSplash = document.getElementById('chapter-splash');
-    const debugToggle = document.getElementById('debug-toggle');
-    const btnFullscreen = document.getElementById('btn-fullscreen');
-    const jumpscare = document.getElementById('jumpscare');
-
-    let interactTarget = null;
-    let targetData = null;
-
-    document.getElementById('start-btn').addEventListener('click', () => {
-      initAudio();
-      activateImmersiveMode();
-      isMonsterFrozen = document.getElementById('debug-checkbox').checked;
-      updateDebugButton();
-      document.getElementById('start-overlay').style.display = 'none';
-      setTimeout(onWindowResize, 300);
-    });
-
-    btnFullscreen.addEventListener('click', () => {
-      activateImmersiveMode();
-      setTimeout(onWindowResize, 300);
-    });
-
-    debugToggle.addEventListener('click', () => {
-      isMonsterFrozen = !isMonsterFrozen;
-      updateDebugButton();
-    });
-
-    function updateDebugButton() {
-      if (isMonsterFrozen) {
-        debugToggle.innerText = "DEBUG: TRAVADO";
-        debugToggle.style.borderColor = "#00ff88";
-        debugToggle.style.color = "#00ff88";
-      } else {
-        debugToggle.innerText = "DEBUG: ATIVO";
-        debugToggle.style.borderColor = "#ff0000";
-        debugToggle.style.color = "#ff0000";
-      }
-    }
-
-    noteClose.addEventListener('click', () => { noteModal.style.display = 'none'; });
-
-    interactBtn.addEventListener('touchstart', (e) => {
-      e.preventDefault();
-      if (!interactTarget) return;
-
-      if (interactTarget === 'note') {
-        noteTitle.innerText = targetData.title;
-        noteBody.innerText = targetData.text;
-        noteModal.style.display = 'block';
-      } else if (interactTarget === 'key') {
-        hasKey = true;
-        scene.remove(keyMesh);
-        invStatus.innerText = "[ CHAVE: CARTÃO VERMELHO ]";
-        invStatus.style.color = "#33ff33";
-        playPickup();
-      } else if (interactTarget === 'door') {
-        if (hasKey) {
-          doorOpened = true;
-          playDoorOpen();
-        }
-      } else if (interactTarget === 'elevator') {
-        if (!elevatorMoving && currentChapter === 1) {
-          startElevatorDescent();
-        }
-      }
-    });
-
-    function startElevatorDescent() {
-      elevatorMoving = true;
-      playElevatorHum();
-      elevatorLight.intensity = 2.0;
-
-      let descentInterval = setInterval(() => {
-        camera.position.y -= 0.12;
-        elevatorCabin.position.y -= 0.12;
-        elevatorLight.position.y -= 0.12;
-
-        if (Math.random() > 0.5) {
-          elevatorLight.intensity = elevatorLight.intensity > 0.5 ? 0.2 : 2.5;
-        }
-
-        if (camera.position.y <= -22.4) {
-          clearInterval(descentInterval);
-          camera.position.y = -22.4;
-          elevatorCabin.position.y = -24;
-          elevatorMoving = false;
-          elevatorLight.intensity = 0;
-          currentChapter = 2;
-          monsterGroup.position.set(0, -24, -90);
-
-          chapterSplash.style.display = 'block';
-          setTimeout(() => { chapterSplash.style.display = 'none'; }, 3500);
-        }
-      }, 30);
-    }
-
-    function triggerDeath() {
-      if (dead) return;
-      dead = true;
-      playMonsterRoar();
-      jumpscare.style.display = 'block';
-
-      setTimeout(() => {
-        jumpscare.style.display = 'none';
-        camera.position.set(0, 1.6, 12);
-        monsterGroup.position.set(0, -6, -45);
-        dead = false;
-      }, 1500);
-    }
-
-    // --- LOOP PRINCIPAL ---
-    camera.position.set(0, 1.6, 12);
-    let stepTimer = 0;
-
-    function animate() {
-      requestAnimationFrame(animate);
-
-      camera.quaternion.setFromEuler(new THREE.Euler(pitch, yaw, 0, 'YXZ'));
-
-      if (doorOpened && door.position.x < 3.8) door.position.x += 0.08;
-
-      // Movimentação
-      const isMoving = (Math.abs(moveVector.x) > 0.1 || Math.abs(moveVector.y) > 0.1) && !elevatorMoving && !dead;
-
-      if (isMoving) {
-        const forward = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
-        const right = new THREE.Vector3(1, 0, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
-        camera.position.addScaledVector(forward, -moveVector.y * 0.085);
-        camera.position.addScaledVector(right, moveVector.x * 0.085);
-
-        stepTimer++;
-        if (stepTimer > 22) {
-          playFootstep(currentChapter === 2 ? 'water' : (camera.position.z < -20 ? 'metal' : 'wood'));
-          stepTimer = 0;
-        }
-      }
-
-      // Alturas
-      if (!elevatorMoving && !dead) {
-        let targetY = 1.6;
-        if (currentChapter === 1) {
-          if (camera.position.z > -8) {
-            targetY = 1.6;
-            title.innerText = "CAPÍTULO 1 - RECEPÇÃO";
-          } else if (camera.position.z <= -8 && camera.position.z >= -24) {
-            const t = (camera.position.z - (-8)) / (-16);
-            targetY = 1.6 - (t * 6.0);
-            title.innerText = "CAPÍTULO 1 - RAMPA DE DESCARGA";
-          } else {
-            targetY = -4.4;
-            title.innerText = "CAPÍTULO 1 - SUBSOLO INDUSTRIAL";
-          }
-          camera.position.y += (targetY - camera.position.y) * 0.15;
-        } else {
-          targetY = -22.4;
-          title.innerText = "CAPÍTULO 2 - ABISMO DOS PROTÓTIPOS";
-          camera.position.y += (targetY - camera.position.y) * 0.15;
-        }
-      }
-
-      // Criatura
-      if (!isMonsterFrozen && !elevatorMoving && !dead) {
-        monsterGroup.lookAt(camera.position.x, monsterGroup.position.y, camera.position.z);
-        const distToPlayer = monsterGroup.position.distanceTo(camera.position);
-        const inSameFloor = (currentChapter === 1 && camera.position.z < -18) || currentChapter === 2;
-
-        if (inSameFloor) {
-          const dir = new THREE.Vector3().subVectors(camera.position, monsterGroup.position).normalize();
-          monsterGroup.position.x += dir.x * 0.045;
-          monsterGroup.position.z += dir.z * 0.045;
-
-          armL.rotation.x = Math.sin(Date.now() * 0.008) * 0.4;
-          armR.rotation.x = -Math.sin(Date.now() * 0.008) * 0.4;
-
-          if (distToPlayer < 2.0) triggerDeath();
-        }
-      }
-
-      // Raycasting
-      raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
-      const hitNotes = raycaster.intersectObjects(notes.map(n => n.mesh));
-      const hitKey = !hasKey ? raycaster.intersectObject(keyMesh) : [];
-      const hitDoor = !doorOpened ? raycaster.intersectObject(door) : [];
-      const hitPanel = (currentChapter === 1 && !elevatorMoving) ? raycaster.intersectObject(elevatorPanel) : [];
-
-      if (hitNotes.length > 0 && hitNotes[0].distance < 3.8) {
-        interactTarget = 'note';
-        targetData = notes.find(n => n.mesh === hitNotes[0].object);
-        interactBtn.innerText = "LER";
-        interactBtn.style.display = 'flex';
-      } else if (hitKey.length > 0 && hitKey[0].distance < 3.5) {
-        interactTarget = 'key';
-        interactBtn.innerText = "PEGAR CHAVE";
-        interactBtn.style.display = 'flex';
-      } else if (hitDoor.length > 0 && hitDoor[0].distance < 4.0) {
-        interactTarget = 'door';
-        interactBtn.innerText = hasKey ? "ABRIR PORTA" : "[TRANCADA]";
-        interactBtn.style.display = 'flex';
-      } else if (hitPanel.length > 0 && hitPanel[0].distance < 4.5) {
-        interactTarget = 'elevator';
-        interactBtn.innerText = "DESCER ELEVADOR";
-        interactBtn.style.display = 'flex';
-      } else {
-        interactTarget = null;
-        interactBtn.style.display = 'none';
-      }
-
-      renderer.render(scene, camera);
-    }
-    animate();
-
-    function onWindowResize() {
-      camera.aspect = window.innerWidth / window.innerHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
-    }
-    window.addEventListener('resize', onWindowResize);
-    window.addEventListener('orientationchange', () => setTimeout(onWindowResize, 200));
-  </script>
-</body>
-</html>
-  <div id="start-overlay">
-    <h1>PLAYTIME CO.</h1>
-    <p>O jogo será colocado em TELA CHEIA e MODO HORIZONTAL ao iniciar.</p>
-    
-    <label class="debug-box">
-      <input type="checkbox" id="debug-checkbox" checked>
-      MODO DEBUG: CONGELAR BICHO
-    </label>
-
-    <button id="start-btn">INICIAR JOGO</button>
-  </div>
-
-  <div id="jumpscare"></div>
-  
-  <div id="top-bar">
-    <button id="btn-fullscreen" class="hud-btn">⛶ TELA CHEIA</button>
-    <button id="debug-toggle" class="hud-btn">DEBUG: TRAVADO</button>
-  </div>
-
-  <div id="chapter-splash">CAPÍTULO 2<br><span style="font-size: 13px; color:#aaa;">O ABISMO DOS PROTÓTIPOS</span></div>
-
-  <div id="touch-look"></div>
-  <div id="crosshair"></div>
-  
-  <div id="hud-info">
-    <div id="zone-title">CAPÍTULO 1 - RECEPÇÃO</div>
-    <div id="inventory-status">[ CHAVE: NENHUMA ]</div>
-  </div>
-  
-  <div id="joystick-container">
-    <div id="joystick-knob"></div>
-  </div>
-
-  <div id="interact-btn">INTERAGIR</div>
-
-  <div id="note-modal">
-    <div id="note-title">REGISTRO INTERNO</div>
-    <div id="note-body">...</div>
-    <button id="note-close">FECHAR REGISTRO</button>
-  </div>
-
-  <script>
-    // --- FUNÇÃO PARA ATIVAR HORIZONTAL E FULLSCREEN ---
-    async function activateImmersiveMode() {
-      try {
-        // 1. Entra em Tela Cheia
-        if (!document.fullscreenElement) {
-          if (document.documentElement.requestFullscreen) {
-            await document.documentElement.requestFullscreen();
-          } else if (document.documentElement.webkitRequestFullscreen) {
-            await document.documentElement.webkitRequestFullscreen();
-          }
-        }
-        // 2. Trava na Horizontal
-        if (screen.orientation && screen.orientation.lock) {
-          await screen.orientation.lock('landscape').catch(() => {
-            // Alguns navegadores exigem que o usuário já esteja segurando na horizontal
-          });
-        }
-      } catch (err) {
-        console.log("Aviso Fullscreen/Orientação:", err);
-      }
-    }
-
-    // --- ESTADOS ---
-    let isMonsterFrozen = true;
-    let hasKey = false;
-    let doorOpened = false;
-    let elevatorMoving = false;
-    let currentChapter = 1;
-
-    // --- ÁUDIO ---
-    let audioCtx = null;
-    function initAudio() {
-      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      if (audioCtx.state === 'suspended') audioCtx.resume();
-    }
-
-    function playFootstep(type) {
-      if (!audioCtx) return;
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      const now = audioCtx.currentTime;
-
-      if (type === 'metal') {
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(80, now);
-        osc.frequency.exponentialRampToValueAtTime(30, now + 0.12);
-        gain.gain.setValueAtTime(0.18, now);
-      } else if (type === 'water') {
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(280, now);
-        osc.frequency.exponentialRampToValueAtTime(80, now + 0.1);
-        gain.gain.setValueAtTime(0.12, now);
-      } else {
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(130, now);
-        osc.frequency.exponentialRampToValueAtTime(40, now + 0.09);
-        gain.gain.setValueAtTime(0.14, now);
-      }
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-      osc.start(now);
-      osc.stop(now + 0.15);
-    }
-
-    function playMonsterRoar() {
-      if (!audioCtx) return;
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      const now = audioCtx.currentTime;
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(70, now);
-      osc.frequency.linearRampToValueAtTime(30, now + 1.2);
-      gain.gain.setValueAtTime(0.4, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 1.25);
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-      osc.start(now);
-      osc.stop(now + 1.3);
-    }
-
-    function playElevatorHum() {
-      if (!audioCtx) return;
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      const now = audioCtx.currentTime;
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(40, now);
-      osc.frequency.linearRampToValueAtTime(55, now + 3);
-      gain.gain.setValueAtTime(0.2, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 5.0);
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-      osc.start(now);
-      osc.stop(now + 5.2);
-    }
-
-    function playDoorOpen() {
-      if (!audioCtx) return;
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      const now = audioCtx.currentTime;
-      osc.type = 'square';
-      osc.frequency.setValueAtTime(150, now);
-      osc.frequency.exponentialRampToValueAtTime(70, now + 0.4);
-      gain.gain.setValueAtTime(0.15, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-      osc.start(now);
-      osc.stop(now + 0.5);
-    }
-
-    function playPickup() {
-      if (!audioCtx) return;
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      const now = audioCtx.currentTime;
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(440, now);
-      osc.frequency.exponentialRampToValueAtTime(880, now + 0.2);
-      gain.gain.setValueAtTime(0.2, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-      osc.start(now);
-      osc.stop(now + 0.25);
-    }
-
-    // --- CENA THREE.JS ---
-    const scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0x06060c, 0.04);
-
-    const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 80);
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    document.body.appendChild(renderer.domElement);
-
-    // Iluminação mais forte para evitar tela preta
-    const ambientLight = new THREE.AmbientLight(0x2a2a38, 0.85);
-    scene.add(ambientLight);
-
-    const flashlight = new THREE.SpotLight(0xffeedd, 3.5, 32, Math.PI / 4.5, 0.4);
-    camera.add(flashlight);
-    flashlight.position.set(0, 0, 0);
-    flashlight.target = camera;
-    scene.add(camera);
-
-    const shopBulb = new THREE.PointLight(0xffbb66, 1.2, 18);
-    shopBulb.position.set(0, 4, 10);
-    scene.add(shopBulb);
-
-    const elevatorLight = new THREE.PointLight(0xff1100, 0, 10);
-    elevatorLight.position.set(0, -4.5, -57);
-    scene.add(elevatorLight);
-
-    // Materiais
-    const matWood = new THREE.MeshStandardMaterial({ color: 0x4a3424, roughness: 0.7 });
-    const matWallStore = new THREE.MeshStandardMaterial({ color: 0x3d4b58, roughness: 0.8 });
-    const matConcrete = new THREE.MeshStandardMaterial({ color: 0x222226, roughness: 0.9 });
-    const matMetal = new THREE.MeshStandardMaterial({ color: 0x4d4d5a, metalness: 0.8, roughness: 0.3 });
-    const matDeepFloor = new THREE.MeshStandardMaterial({ color: 0x12151a, roughness: 0.3, metalness: 0.4 });
-
-    // CAPÍTULO 1
-    const shopFloor = new THREE.Mesh(new THREE.PlaneGeometry(24, 30), matWood);
-    shopFloor.rotation.x = -Math.PI / 2;
-    shopFloor.position.set(0, 0, 5);
-    scene.add(shopFloor);
-
-    function createWall(w, h, d, x, y, z) {
-      const wall = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), matWallStore);
-      wall.position.set(x, y, z);
-      scene.add(wall);
-    }
-    createWall(24, 6, 0.5, 0, 3, 20);
-    createWall(0.5, 6, 30, -12, 3, 5);
-    createWall(0.5, 6, 30, 12, 3, 5);
-
-    const counter = new THREE.Mesh(new THREE.BoxGeometry(6, 1.1, 1.6), new THREE.MeshStandardMaterial({ color: 0xba813a }));
-    counter.position.set(0, 0.55, 14);
-    scene.add(counter);
-
-    const ramp = new THREE.Mesh(new THREE.PlaneGeometry(8, 16), matConcrete);
-    ramp.rotation.x = -Math.PI / 2 + 0.375;
-    ramp.position.set(0, -3, -16);
-    scene.add(ramp);
-
-    const subFloor = new THREE.Mesh(new THREE.PlaneGeometry(30, 30), matConcrete);
-    subFloor.rotation.x = -Math.PI / 2;
-    subFloor.position.set(0, -6, -37);
-    scene.add(subFloor);
-
-    const desk = new THREE.Mesh(new THREE.BoxGeometry(3, 1, 1.5), matMetal);
-    desk.position.set(8, -5.5, -40);
-    scene.add(desk);
-
-    const keyMesh = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.05, 0.5), new THREE.MeshBasicMaterial({ color: 0xff1122 }));
-    keyMesh.position.set(8, -4.95, -40);
-    scene.add(keyMesh);
-
-    const wallElevatorBack = new THREE.Mesh(new THREE.BoxGeometry(30, 8, 0.8), matMetal);
-    wallElevatorBack.position.set(0, -2, -52);
-    scene.add(wallElevatorBack);
-
-    const door = new THREE.Mesh(new THREE.BoxGeometry(4, 5, 0.4), new THREE.MeshStandardMaterial({ color: 0x882222, metalness: 0.7 }));
-    door.position.set(0, -3.5, -51.8);
-    scene.add(door);
-
-    const elevatorPanel = new THREE.Mesh(new THREE.BoxGeometry(0.6, 1.0, 0.2), new THREE.MeshBasicMaterial({ color: 0x33ff33 }));
-    elevatorPanel.position.set(2.5, -4.0, -57);
-    scene.add(elevatorPanel);
-
-    const elevatorCabin = new THREE.Group();
-    const elevFloor = new THREE.Mesh(new THREE.PlaneGeometry(6, 6), matMetal);
-    elevFloor.rotation.x = -Math.PI / 2;
-    elevatorCabin.add(elevFloor);
-    elevatorCabin.position.set(0, -6, -57);
-    scene.add(elevatorCabin);
-
-    // CAPÍTULO 2
-    const deepFloor = new THREE.Mesh(new THREE.PlaneGeometry(40, 50), matDeepFloor);
-    deepFloor.rotation.x = -Math.PI / 2;
-    deepFloor.position.set(0, -24, -80);
-    scene.add(deepFloor);
-
-    for (let r = -1; r <= 1; r += 2) {
-      const rail = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.15, 45), matMetal);
-      rail.position.set(r * 1.5, -23.9, -80);
-      scene.add(rail);
-    }
-
-    // CRIATURA
-    const monsterGroup = new THREE.Group();
-    const matMonsterBody = new THREE.MeshStandardMaterial({ color: 0x0e2f59, roughness: 0.9 });
-    const matEye = new THREE.MeshBasicMaterial({ color: 0xffffff });
-    const matMouth = new THREE.MeshBasicMaterial({ color: 0x660000 });
-
-    const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.25, 2.2, 8), matMonsterBody);
-    torso.position.y = 2.0;
-    monsterGroup.add(torso);
-
-    const head = new THREE.Mesh(new THREE.SphereGeometry(0.45, 8, 8), matMonsterBody);
-    head.position.y = 3.3;
-    monsterGroup.add(head);
-
-    const eye1 = new THREE.Mesh(new THREE.SphereGeometry(0.08, 6, 6), matEye);
-    eye1.position.set(0.18, 3.4, 0.38);
-    const eye2 = eye1.clone();
-    eye2.position.x = -0.18;
-    monsterGroup.add(eye1);
-    monsterGroup.add(eye2);
-
-    const mouth = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.15, 0.1), matMouth);
-    mouth.position.set(0, 3.15, 0.4);
-    monsterGroup.add(mouth);
-
-    const armL = new THREE.Mesh(new THREE.BoxGeometry(0.15, 2.5, 0.15), matMonsterBody);
-    armL.position.set(0.55, 1.8, 0);
-    const armR = armL.clone();
-    armR.position.x = -0.55;
-    monsterGroup.add(armL);
-    monsterGroup.add(armR);
-
-    monsterGroup.position.set(0, -6, -45);
-    scene.add(monsterGroup);
-
-    // NOTAS
-    const notes = [];
-    const noteGeo = new THREE.PlaneGeometry(0.4, 0.55);
-    const noteMat = new THREE.MeshBasicMaterial({ color: 0xfff3db, side: THREE.DoubleSide });
-
-    function addNote(x, y, z, rotX, rotY, title, text) {
-      const mesh = new THREE.Mesh(noteGeo, noteMat);
-      mesh.position.set(x, y, z);
-      mesh.rotation.x = rotX;
-      mesh.rotation.y = rotY;
-      scene.add(mesh);
-      notes.push({ mesh, title, text });
-    }
-
-    addNote(0.5, 1.12, 14, -Math.PI / 2, 0.2, 
-      "ORDEM DE EVACUAÇÃO - 1994",
-      "Tranquem a recepção. A chave vermelha foi guardada na bancada de manutenção do subsolo."
-    );
-
-    addNote(7.5, -4.95, -40, -Math.PI / 2, 0,
-      "ACESSO AO SETOR B",
-      "Pegue o cartão vermelho sobre a mesa para destravar a porta de aço do elevador."
-    );
-
-    // --- HUD E EVENTOS ---
-    const raycaster = new THREE.Raycaster();
-    const interactBtn = document.getElementById('interact-btn');
-    const noteModal = document.getElementById('note-modal');
-    const noteTitle = document.getElementById('note-title');
-    const noteBody = document.getElementById('note-body');
-    const noteClose = document.getElementById('note-close');
-    const invStatus = document.getElementById('inventory-status');
-    const title = document.getElementById('zone-title');
-    const chapterSplash = document.getElementById('chapter-splash');
-    const debugToggle = document.getElementById('debug-toggle');
-    const btnFullscreen = document.getElementById('btn-fullscreen');
-    const jumpscare = document.getElementById('jumpscare');
-
-    let interactTarget = null;
-    let targetData = null;
-
-    document.getElementById('start-btn').addEventListener('click', () => {
-      initAudio();
-      activateImmersiveMode();
-      isMonsterFrozen = document.getElementById('debug-checkbox').checked;
-      updateDebugButton();
-      document.getElementById('start-overlay').style.display = 'none';
-      setTimeout(onWindowResize, 300);
-    });
-
-    btnFullscreen.addEventListener('click', () => {
-      activateImmersiveMode();
-      setTimeout(onWindowResize, 300);
-    });
-
-    debugToggle.addEventListener('click', () => {
-      isMonsterFrozen = !isMonsterFrozen;
-      updateDebugButton();
-    });
-
-    function updateDebugButton() {
-      if (isMonsterFrozen) {
-        debugToggle.innerText = "DEBUG: TRAVADO";
-        debugToggle.style.borderColor = "#00ff88";
-        debugToggle.style.color = "#00ff88";
-      } else {
-        debugToggle.innerText = "DEBUG: ATIVO";
-        debugToggle.style.borderColor = "#ff0000";
-        debugToggle.style.color = "#ff0000";
-      }
-    }
-
-    noteClose.addEventListener('click', () => { noteModal.style.display = 'none'; });
-
-    interactBtn.addEventListener('touchstart', (e) => {
-      e.preventDefault();
-      if (!interactTarget) return;
-
-      if (interactTarget === 'note') {
-        noteTitle.innerText = targetData.title;
-        noteBody.innerText = targetData.text;
-        noteModal.style.display = 'block';
-      } else if (interactTarget === 'key') {
-        hasKey = true;
-        scene.remove(keyMesh);
-        invStatus.innerText = "[ CHAVE: CARTÃO VERMELHO ]";
-        invStatus.style.color = "#33ff33";
-        playPickup();
-      } else if (interactTarget === 'door') {
-        if (hasKey) {
-          doorOpened = true;
-          playDoorOpen();
-        }
-      } else if (interactTarget === 'elevator') {
-        if (!elevatorMoving && currentChapter === 1) {
-          startElevatorDescent();
-        }
-      }
-    });
-
-    function startElevatorDescent() {
-      elevatorMoving = true;
-      playElevatorHum();
-      elevatorLight.intensity = 2.0;
-
-      let descentInterval = setInterval(() => {
-        camera.position.y -= 0.12;
-        elevatorCabin.position.y -= 0.12;
-        elevatorLight.position.y -= 0.12;
-
-        if (Math.random() > 0.5) {
-          elevatorLight.intensity = elevatorLight.intensity > 0.5 ? 0.2 : 2.5;
-        }
-
-        if (camera.position.y <= -22.4) {
-          clearInterval(descentInterval);
-          camera.position.y = -22.4;
-          elevatorCabin.position.y = -24;
-          elevatorMoving = false;
-          elevatorLight.intensity = 0;
-          currentChapter = 2;
-          monsterGroup.position.set(0, -24, -90);
-
-          chapterSplash.style.display = 'block';
-          setTimeout(() => { chapterSplash.style.display = 'none'; }, 3500);
-        }
-      }, 30);
-    }
-
-    // --- CONTROLE DE OLHAR & JOYSTICK ---
-    let touchX = 0, touchY = 0;
-    let yaw = 0, pitch = 0;
-    const lookArea = document.getElementById('touch-look');
-
-    lookArea.addEventListener('touchstart', (e) => {
-      touchX = e.changedTouches[0].clientX;
-      touchY = e.changedTouches[0].clientY;
-    });
-
-    lookArea.addEventListener('touchmove', (e) => {
-      const t = e.changedTouches[0];
-      yaw -= (t.clientX - touchX) * 0.005;
-      pitch -= (t.clientY - touchY) * 0.005;
-      pitch = Math.max(-Math.PI / 2.3, Math.min(Math.PI / 2.3, pitch));
-      touchX = t.clientX;
-      touchY = t.clientY;
-    });
-
-    const joyContainer = document.getElementById('joystick-container');
-    const knob = document.getElementById('joystick-knob');
-    let moveVector = { x: 0, y: 0 };
-    let joyId = null;
-
-    joyContainer.addEventListener('touchstart', (e) => {
-      const t = e.changedTouches[0];
-      joyId = t.identifier;
-      handleJoy(t);
-    });
-
-    window.addEventListener('touchmove', (e) => {
-      if (joyId === null) return;
-      for (let t of e.changedTouches) {
-        if (t.identifier === joyId) handleJoy(t);
-      }
-    });
-
-    const stopJoy = () => {
-      joyId = null;
-      moveVector = { x: 0, y: 0 };
-      knob.style.transform = `translate(-50%, -50%)`;
-    };
-    window.addEventListener('touchend', stopJoy);
-    window.addEventListener('touchcancel', stopJoy);
-
-    function handleJoy(t) {
-      const rect = joyContainer.getBoundingClientRect();
-      const dx = Math.min(Math.max(t.clientX - (rect.left + rect.width / 2), -rect.width / 2), rect.width / 2);
-      const dy = Math.min(Math.max(t.clientY - (rect.top + rect.height / 2), -rect.height / 2), rect.height / 2);
-      knob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
-      moveVector.x = dx / (rect.width / 2);
-      moveVector.y = dy / (rect.height / 2);
-    }
-
-    let dead = false;
-    function triggerDeath() {
-      if (dead) return;
-      dead = true;
-      playMonsterRoar();
-      jumpscare.style.display = 'block';
-
-      setTimeout(() => {
-        jumpscare.style.display = 'none';
-        camera.position.set(0, 1.6, 12);
-        monsterGroup.position.set(0, -6, -45);
-        dead = false;
-      }, 1500);
-    }
-
-    // --- LOOP PRINCIPAL ---
-    camera.position.set(0, 1.6, 12);
-    let stepTimer = 0;
-
-    function animate() {
-      requestAnimationFrame(animate);
-
-      camera.quaternion.setFromEuler(new THREE.Euler(pitch, yaw, 0, 'YXZ'));
-
-      if (doorOpened && door.position.x < 3.8) door.position.x += 0.08;
-
-      const isMoving = (Math.abs(moveVector.x) > 0.1 || Math.abs(moveVector.y) > 0.1) && !elevatorMoving && !dead;
-
-      if (isMoving) {
-        const forward = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
-        const right = new THREE.Vector3(1, 0, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
-        camera.position.addScaledVector(forward, -moveVector.y * 0.08);
-        camera.position.addScaledVector(right, moveVector.x * 0.08);
-
-        stepTimer++;
-        if (stepTimer > 22) {
-          playFootstep(currentChapter === 2 ? 'water' : (camera.position.z < -20 ? 'metal' : 'wood'));
-          stepTimer = 0;
-        }
-      }
-
-      if (!elevatorMoving && !dead) {
-        let targetY = 1.6;
-        if (currentChapter === 1) {
-          if (camera.position.z > -8) {
-            targetY = 1.6;
-            title.innerText = "CAPÍTULO 1 - RECEPÇÃO";
-          } else if (camera.position.z <= -8 && camera.position.z >= -24) {
-            const t = (camera.position.z - (-8)) / (-16);
-            targetY = 1.6 - (t * 6.0);
-            title.innerText = "CAPÍTULO 1 - RAMPA DE DESCARGA";
-          } else {
-            targetY = -4.4;
-            title.innerText = "CAPÍTULO 1 - SUBSOLO INDUSTRIAL";
-          }
-          camera.position.y += (targetY - camera.position.y) * 0.15;
-        } else {
-          targetY = -22.4;
-          title.innerText = "CAPÍTULO 2 - ABISMO DOS PROTÓTIPOS";
-          camera.position.y += (targetY - camera.position.y) * 0.15;
-        }
-      }
-
-      // IA DO BICHO
-      if (!isMonsterFrozen && !elevatorMoving && !dead) {
-        monsterGroup.lookAt(camera.position.x, monsterGroup.position.y, camera.position.z);
-        const distToPlayer = monsterGroup.position.distanceTo(camera.position);
-        const inSameFloor = (currentChapter === 1 && camera.position.z < -18) || currentChapter === 2;
-
-        if (inSameFloor) {
-          const dir = new THREE.Vector3().subVectors(camera.position, monsterGroup.position).normalize();
-          monsterGroup.position.x += dir.x * 0.045;
-          monsterGroup.position.z += dir.z * 0.045;
-
-          armL.rotation.x = Math.sin(Date.now() * 0.008) * 0.4;
-          armR.rotation.x = -Math.sin(Date.now() * 0.008) * 0.4;
-
-          if (distToPlayer < 2.0) triggerDeath();
-        }
-      }
-
-      // RAYCAST
-      raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
-      const hitNotes = raycaster.intersectObjects(notes.map(n => n.mesh));
-      const hitKey = !hasKey ? raycaster.intersectObject(keyMesh) : [];
-      const hitDoor = !doorOpened ? raycaster.intersectObject(door) : [];
-      const hitPanel = (currentChapter === 1 && !elevatorMoving) ? raycaster.intersectObject(elevatorPanel) : [];
-
-      if (hitNotes.length > 0 && hitNotes[0].distance < 3.8) {
-        interactTarget = 'note';
-        targetData = notes.find(n => n.mesh === hitNotes[0].object);
-        interactBtn.innerText = "LER";
-        interactBtn.style.display = 'flex';
-      } else if (hitKey.length > 0 && hitKey[0].distance < 3.5) {
-        interactTarget = 'key';
-        interactBtn.innerText = "PEGAR CHAVE";
-        interactBtn.style.display = 'flex';
-      } else if (hitDoor.length > 0 && hitDoor[0].distance < 4.0) {
-        interactTarget = 'door';
-        interactBtn.innerText = hasKey ? "ABRIR PORTA" : "[TRANCADA]";
-        interactBtn.style.display = 'flex';
-      } else if (hitPanel.length > 0 && hitPanel[0].distance < 4.5) {
-        interactTarget = 'elevator';
-        interactBtn.innerText = "DESCER ELEVADOR";
-        interactBtn.style.display = 'flex';
-      } else {
-        interactTarget = null;
-        interactBtn.style.display = 'none';
-      }
-
-      renderer.render(scene, camera);
-    }
-    animate();
-
-    function onWindowResize() {
-      camera.aspect = window.innerWidth / window.innerHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
-    }
-    window.addEventListener('resize', onWindowResize);
-    window.addEventListener('orientationchange', () => setTimeout(onWindowResize, 200));
-  </script>
-</body>
-</html>
-    
-    <label class="debug-box">
-      <input type="checkbox" id="debug-checkbox" checked>
-      MODO DEBUG: CONGELAR BICHO
-    </label>
-
-    <button id="start-btn">INICIAR JOGO</button>
-  </div>
-
-  <div id="jumpscare"></div>
-  <button id="debug-toggle">DEBUG: BICHO TRAVADO</button>
-
-  <div id="chapter-splash">CAPÍTULO 2<br><span style="font-size: 13px; color:#aaa;">O ABISMO DOS PROTÓTIPOS</span></div>
-
-  <div id="touch-look"></div>
-  <div id="crosshair"></div>
-  
-  <div id="hud-info">
-    <div id="zone-title">SETOR A: RECEPÇÃO COMERCIAL</div>
-    <div id="inventory-status">[ CHAVE: NENHUMA ]</div>
-  </div>
-  
-  <div id="joystick-container">
-    <div id="joystick-knob"></div>
-  </div>
-
-  <div id="interact-btn">INTERAGIR</div>
-
-  <div id="note-modal">
-    <div id="note-title">REGISTRO INTERNO</div>
-    <div id="note-body">...</div>
-    <button id="note-close">FECHAR REGISTRO</button>
-  </div>
-
-  <script>
-    // --- ESTADO GERAL & DEBUG ---
-    let isMonsterFrozen = true;
-    let hasKey = false;
-    let doorOpened = false;
-    let elevatorMoving = false;
-    let currentChapter = 1;
-
-    // --- MOTOR DE ÁUDIO NATIVO ---
-    let audioCtx = null;
-    function initAudio() {
-      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      if (audioCtx.state === 'suspended') audioCtx.resume();
-    }
-
-    function playFootstep(type) {
-      if (!audioCtx) return;
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      const now = audioCtx.currentTime;
-
-      if (type === 'metal') {
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(80, now);
-        osc.frequency.exponentialRampToValueAtTime(30, now + 0.12);
-        gain.gain.setValueAtTime(0.18, now);
-      } else if (type === 'water') {
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(280, now);
-        osc.frequency.exponentialRampToValueAtTime(80, now + 0.1);
-        gain.gain.setValueAtTime(0.12, now);
-      } else {
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(130, now);
-        osc.frequency.exponentialRampToValueAtTime(40, now + 0.09);
-        gain.gain.setValueAtTime(0.14, now);
-      }
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-      osc.start(now);
-      osc.stop(now + 0.15);
-    }
-
-    function playMonsterRoar() {
-      if (!audioCtx) return;
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      const now = audioCtx.currentTime;
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(70, now);
-      osc.frequency.linearRampToValueAtTime(30, now + 1.2);
-      gain.gain.setValueAtTime(0.4, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 1.25);
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-      osc.start(now);
-      osc.stop(now + 1.3);
-    }
-
-    function playElevatorHum() {
-      if (!audioCtx) return;
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      const now = audioCtx.currentTime;
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(40, now);
-      osc.frequency.linearRampToValueAtTime(55, now + 3);
-      gain.gain.setValueAtTime(0.2, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 5.0);
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-      osc.start(now);
-      osc.stop(now + 5.2);
-    }
-
-    function playDoorOpen() {
-      if (!audioCtx) return;
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      const now = audioCtx.currentTime;
-      osc.type = 'square';
-      osc.frequency.setValueAtTime(150, now);
-      osc.frequency.exponentialRampToValueAtTime(70, now + 0.4);
-      gain.gain.setValueAtTime(0.15, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-      osc.start(now);
-      osc.stop(now + 0.5);
-    }
-
-    function playPickup() {
-      if (!audioCtx) return;
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      const now = audioCtx.currentTime;
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(440, now);
-      osc.frequency.exponentialRampToValueAtTime(880, now + 0.2);
-      gain.gain.setValueAtTime(0.2, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-      osc.start(now);
-      osc.stop(now + 0.25);
-    }
-
-    // --- CENA THREE.JS ---
-    const scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0x040407, 0.055);
-
-    const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 80);
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    document.body.appendChild(renderer.domElement);
-
-    const flashlight = new THREE.SpotLight(0xffeedd, 2.8, 28, Math.PI / 5, 0.4);
-    camera.add(flashlight);
-    flashlight.position.set(0, 0, 0);
-    flashlight.target = camera;
-    scene.add(camera);
-
-    const ambientLight = new THREE.AmbientLight(0x111119, 0.4);
-    scene.add(ambientLight);
-
-    const elevatorLight = new THREE.PointLight(0xff1100, 0, 10);
-    elevatorLight.position.set(0, -4.5, -57);
-    scene.add(elevatorLight);
-
-    // Materiais
-    const matWood = new THREE.MeshStandardMaterial({ color: 0x332014, roughness: 0.8 });
-    const matWallStore = new THREE.MeshStandardMaterial({ color: 0x242e35, roughness: 0.9 });
-    const matConcrete = new THREE.MeshStandardMaterial({ color: 0x141416, roughness: 0.95 });
-    const matMetal = new THREE.MeshStandardMaterial({ color: 0x33333d, metalness: 0.8, roughness: 0.3 });
-    const matDeepFloor = new THREE.MeshStandardMaterial({ color: 0x0a0c0e, roughness: 0.3, metalness: 0.4 });
-
-    // --- ESTRUTURA DO MAPA (LOJA E SUBSOLO) ---
-    const shopFloor = new THREE.Mesh(new THREE.PlaneGeometry(24, 30), matWood);
-    shopFloor.rotation.x = -Math.PI / 2;
-    shopFloor.position.set(0, 0, 5);
-    scene.add(shopFloor);
-
-    function createWall(w, h, d, x, y, z) {
-      const wall = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), matWallStore);
-      wall.position.set(x, y, z);
-      scene.add(wall);
-    }
-    createWall(24, 6, 0.5, 0, 3, 20);
-    createWall(0.5, 6, 30, -12, 3, 5);
-    createWall(0.5, 6, 30, 12, 3, 5);
-
-    const ramp = new THREE.Mesh(new THREE.PlaneGeometry(8, 16), matConcrete);
-    ramp.rotation.x = -Math.PI / 2 + 0.375;
-    ramp.position.set(0, -3, -16);
-    scene.add(ramp);
-
-    const subFloor = new THREE.Mesh(new THREE.PlaneGeometry(30, 30), matConcrete);
-    subFloor.rotation.x = -Math.PI / 2;
-    subFloor.position.set(0, -6, -37);
-    scene.add(subFloor);
-
-    // Bancada e Chave Vermelha
-    const desk = new THREE.Mesh(new THREE.BoxGeometry(3, 1, 1.5), matMetal);
-    desk.position.set(8, -5.5, -40);
-    scene.add(desk);
-
-    const keyMesh = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.05, 0.5), new THREE.MeshBasicMaterial({ color: 0xff1122 }));
-    keyMesh.position.set(8, -4.95, -40);
-    scene.add(keyMesh);
-
-    // Divisória e Porta
-    const wallElevatorBack = new THREE.Mesh(new THREE.BoxGeometry(30, 8, 0.8), matMetal);
-    wallElevatorBack.position.set(0, -2, -52);
-    scene.add(wallElevatorBack);
-
-    const door = new THREE.Mesh(new THREE.BoxGeometry(4, 5, 0.4), new THREE.MeshStandardMaterial({ color: 0x662222, metalness: 0.7 }));
-    door.position.set(0, -3.5, -51.8);
-    scene.add(door);
-
-    const elevatorPanel = new THREE.Mesh(new THREE.BoxGeometry(0.6, 1.0, 0.2), new THREE.MeshBasicMaterial({ color: 0x33ff33 }));
-    elevatorPanel.position.set(2.5, -4.0, -57);
-    scene.add(elevatorPanel);
-
-    const elevatorCabin = new THREE.Group();
-    const elevFloor = new THREE.Mesh(new THREE.PlaneGeometry(6, 6), matMetal);
-    elevFloor.rotation.x = -Math.PI / 2;
-    elevatorCabin.add(elevFloor);
-    elevatorCabin.position.set(0, -6, -57);
-    scene.add(elevatorCabin);
-
-    // --- CAPÍTULO 2 ---
-    const deepFloor = new THREE.Mesh(new THREE.PlaneGeometry(40, 50), matDeepFloor);
-    deepFloor.rotation.x = -Math.PI / 2;
-    deepFloor.position.set(0, -24, -80);
-    scene.add(deepFloor);
-
-    for (let r = -1; r <= 1; r += 2) {
-      const rail = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.15, 45), matMetal);
-      rail.position.set(r * 1.5, -23.9, -80);
-      scene.add(rail);
-    }
-
-    // --- CRIATURA / BICHO (ESPÉCIME CUDDLE) ---
-    const monsterGroup = new THREE.Group();
-    const matMonsterBody = new THREE.MeshStandardMaterial({ color: 0x0a2244, roughness: 0.9 }); // Azul escuro orgânico
-    const matEye = new THREE.MeshBasicMaterial({ color: 0xffffff });
-    const matMouth = new THREE.MeshBasicMaterial({ color: 0x550000 });
-
-    // Tronco alongado
-    const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.25, 2.2, 8), matMonsterBody);
-    torso.position.y = 2.0;
-    monsterGroup.add(torso);
-
-    // Cabeça
-    const head = new THREE.Mesh(new THREE.SphereGeometry(0.45, 8, 8), matMonsterBody);
-    head.position.y = 3.3;
-    monsterGroup.add(head);
-
-    // Olhos fluorescentes
-    const eye1 = new THREE.Mesh(new THREE.SphereGeometry(0.08, 6, 6), matEye);
-    eye1.position.set(0.18, 3.4, 0.38);
-    const eye2 = eye1.clone();
-    eye2.position.x = -0.18;
-    monsterGroup.add(eye1);
-    monsterGroup.add(eye2);
-
-    // Boca
-    const mouth = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.15, 0.1), matMouth);
-    mouth.position.set(0, 3.15, 0.4);
-    monsterGroup.add(mouth);
-
-    // Braços longos
-    const armL = new THREE.Mesh(new THREE.BoxGeometry(0.15, 2.5, 0.15), matMonsterBody);
-    armL.position.set(0.55, 1.8, 0);
-    const armR = armL.clone();
-    armR.position.x = -0.55;
-    monsterGroup.add(armL);
-    monsterGroup.add(armR);
-
-    // Posição inicial da criatura: Fundo do Subsolo
-    monsterGroup.position.set(0, -6, -45);
-    scene.add(monsterGroup);
-
-    // --- LORE ---
-    const notes = [];
-    const noteGeo = new THREE.PlaneGeometry(0.4, 0.55);
-    const noteMat = new THREE.MeshBasicMaterial({ color: 0xfff3db, side: THREE.DoubleSide });
-
-    function addNote(x, y, z, rotX, rotY, title, text) {
-      const mesh = new THREE.Mesh(noteGeo, noteMat);
-      mesh.position.set(x, y, z);
-      mesh.rotation.x = rotX;
-      mesh.rotation.y = rotY;
-      scene.add(mesh);
-      notes.push({ mesh, title, text });
-    }
-
-    addNote(7.5, -4.95, -40, -Math.PI / 2, 0,
-      "REGISTRO DO ELEVADOR",
-      "A chave vermelha foi deixada na bancada médica. Cuidado com o espécime solto na área de estoque.\n\nUse o painel para descer a cabine até o Setor B."
-    );
-
-    addNote(0, -23.9, -75, -Math.PI / 2, 0,
-      "ARQUIVO CAPÍTULO 2",
-      "Você desceu ao Abismo dos Protótipos.\n\nO sistema biológico foi totalmente corrompido."
-    );
-
-    // --- INTERAÇÃO E HUD ---
-    const raycaster = new THREE.Raycaster();
-    const interactBtn = document.getElementById('interact-btn');
-    const noteModal = document.getElementById('note-modal');
-    const noteTitle = document.getElementById('note-title');
-    const noteBody = document.getElementById('note-body');
-    const noteClose = document.getElementById('note-close');
-    const invStatus = document.getElementById('inventory-status');
-    const title = document.getElementById('zone-title');
-    const chapterSplash = document.getElementById('chapter-splash');
-    const debugToggle = document.getElementById('debug-toggle');
-    const jumpscare = document.getElementById('jumpscare');
-
-    let interactTarget = null;
-    let targetData = null;
-
-    document.getElementById('start-btn').addEventListener('click', () => {
-      initAudio();
-      isMonsterFrozen = document.getElementById('debug-checkbox').checked;
-      updateDebugButton();
-      document.getElementById('start-overlay').style.display = 'none';
-    });
-
-    debugToggle.addEventListener('click', () => {
-      isMonsterFrozen = !isMonsterFrozen;
-      updateDebugButton();
-    });
-
-    function updateDebugButton() {
-      if (isMonsterFrozen) {
-        debugToggle.innerText = "DEBUG: BICHO TRAVADO";
-        debugToggle.style.background = "rgba(0, 200, 100, 0.4)";
-        debugToggle.style.borderColor = "#00ff88";
-      } else {
-        debugToggle.innerText = "DEBUG: BICHO ATIVO";
-        debugToggle.style.background = "rgba(255, 0, 0, 0.4)";
-        debugToggle.style.borderColor = "#ff0000";
-      }
-    }
-
-    noteClose.addEventListener('click', () => {
-      noteModal.style.display = 'none';
-    });
-
-    interactBtn.addEventListener('touchstart', (e) => {
-      e.preventDefault();
-      if (!interactTarget) return;
-
-      if (interactTarget === 'note') {
-        noteTitle.innerText = targetData.title;
-        noteBody.innerText = targetData.text;
-        noteModal.style.display = 'block';
-      } else if (interactTarget === 'key') {
-        hasKey = true;
-        scene.remove(keyMesh);
-        invStatus.innerText = "[ CHAVE: CARTÃO VERMELHO ]";
-        invStatus.style.color = "#33ff33";
-        playPickup();
-      } else if (interactTarget === 'door') {
-        if (hasKey) {
-          doorOpened = true;
-          playDoorOpen();
-        }
-      } else if (interactTarget === 'elevator') {
-        if (!elevatorMoving && currentChapter === 1) {
-          startElevatorDescent();
-        }
-      }
-    });
-
-    function startElevatorDescent() {
-      elevatorMoving = true;
-      playElevatorHum();
-      elevatorLight.intensity = 2.0;
-
-      let descentInterval = setInterval(() => {
-        camera.position.y -= 0.12;
-        elevatorCabin.position.y -= 0.12;
-        elevatorLight.position.y -= 0.12;
-
-        if (Math.random() > 0.5) {
-          elevatorLight.intensity = elevatorLight.intensity > 0.5 ? 0.2 : 2.5;
-        }
-
-        if (camera.position.y <= -22.4) {
-          clearInterval(descentInterval);
-          camera.position.y = -22.4;
-          elevatorCabin.position.y = -24;
-          elevatorMoving = false;
-          elevatorLight.intensity = 0;
-          currentChapter = 2;
-
-          // Se estiver no Cap 2, reposicionar o bicho no abismo se ele estiver solto
-          monsterGroup.position.set(0, -24, -90);
-
-          chapterSplash.style.display = 'block';
-          setTimeout(() => { chapterSplash.style.display = 'none'; }, 3500);
-        }
-      }, 30);
-    }
-
-    // --- CONTROLES DE TOQUE MOBILE ---
-    let touchX = 0, touchY = 0;
-    let yaw = 0, pitch = 0;
-    const lookArea = document.getElementById('touch-look');
-
-    lookArea.addEventListener('touchstart', (e) => {
-      touchX = e.changedTouches[0].clientX;
-      touchY = e.changedTouches[0].clientY;
-    });
-
-    lookArea.addEventListener('touchmove', (e) => {
-      const t = e.changedTouches[0];
-      yaw -= (t.clientX - touchX) * 0.005;
-      pitch -= (t.clientY - touchY) * 0.005;
-      pitch = Math.max(-Math.PI / 2.3, Math.min(Math.PI / 2.3, pitch));
-      touchX = t.clientX;
-      touchY = t.clientY;
-    });
-
-    const joyContainer = document.getElementById('joystick-container');
-    const knob = document.getElementById('joystick-knob');
-    let moveVector = { x: 0, y: 0 };
-    let joyId = null;
-
-    joyContainer.addEventListener('touchstart', (e) => {
-      const t = e.changedTouches[0];
-      joyId = t.identifier;
-      handleJoy(t);
-    });
-
-    window.addEventListener('touchmove', (e) => {
-      if (joyId === null) return;
-      for (let t of e.changedTouches) {
-        if (t.identifier === joyId) handleJoy(t);
-      }
-    });
-
-    const stopJoy = () => {
-      joyId = null;
-      moveVector = { x: 0, y: 0 };
-      knob.style.transform = `translate(-50%, -50%)`;
-    };
-    window.addEventListener('touchend', stopJoy);
-    window.addEventListener('touchcancel', stopJoy);
-
-    function handleJoy(t) {
-      const rect = joyContainer.getBoundingClientRect();
-      const dx = Math.min(Math.max(t.clientX - (rect.left + rect.width / 2), -rect.width / 2), rect.width / 2);
-      const dy = Math.min(Math.max(t.clientY - (rect.top + rect.height / 2), -rect.height / 2), rect.height / 2);
-      knob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
-      moveVector.x = dx / (rect.width / 2);
-      moveVector.y = dy / (rect.height / 2);
-    }
-
-    // --- TRIGGER DE MORTE / JUMPSCARE ---
-    let dead = false;
-    function triggerDeath() {
-      if (dead) return;
-      dead = true;
-      playMonsterRoar();
-      jumpscare.style.display = 'block';
-
-      setTimeout(() => {
-        jumpscare.style.display = 'none';
-        camera.position.set(0, 1.6, 12);
-        monsterGroup.position.set(0, -6, -45);
-        dead = false;
-      }, 1500);
-    }
-
-    // --- LOOP PRINCIPAL ---
-    camera.position.set(0, 1.6, 12);
-    let stepTimer = 0;
-
-    function animate() {
-      requestAnimationFrame(animate);
-
-      camera.quaternion.setFromEuler(new THREE.Euler(pitch, yaw, 0, 'YXZ'));
-
-      if (doorOpened && door.position.x < 3.8) {
-        door.position.x += 0.08;
-      }
-
-      // Movimentação do Jogador
-      const isMoving = (Math.abs(moveVector.x) > 0.1 || Math.abs(moveVector.y) > 0.1) && !elevatorMoving && !dead;
-
-      if (isMoving) {
-        const forward = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
-        const right = new THREE.Vector3(1, 0, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
-        camera.position.addScaledVector(forward, -moveVector.y * 0.075);
-        camera.position.addScaledVector(right, moveVector.x * 0.075);
-
-        stepTimer++;
-        if (stepTimer > 24) {
-          playFootstep(currentChapter === 2 ? 'water' : (camera.position.z < -20 ? 'metal' : 'wood'));
-          stepTimer = 0;
-        }
-      }
-
-      // Alturas das Zonas
-      if (!elevatorMoving && !dead) {
-        let targetY = 1.6;
-        if (currentChapter === 1) {
-          if (camera.position.z > -8) {
-            targetY = 1.6;
-            title.innerText = "CAPÍTULO 1 - RECEPÇÃO";
-          } else if (camera.position.z <= -8 && camera.position.z >= -24) {
-            const t = (camera.position.z - (-8)) / (-16);
-            targetY = 1.6 - (t * 6.0);
-            title.innerText = "CAPÍTULO 1 - RAMPA DE DESCARGA";
-          } else {
-            targetY = -4.4;
-            title.innerText = "CAPÍTULO 1 - SUBSOLO INDUSTRIAL";
-          }
-          camera.position.y += (targetY - camera.position.y) * 0.15;
-        } else {
-          targetY = -22.4;
-          title.innerText = "CAPÍTULO 2 - ABISMO DOS PROTÓTIPOS";
-          camera.position.y += (targetY - camera.position.y) * 0.15;
-        }
-      }
-
-      // --- COMPORTAMENTO DA CRIATURA / IA ---
-      if (!isMonsterFrozen && !elevatorMoving && !dead) {
-        // O monstro sempre olha em direção à câmera
-        monsterGroup.lookAt(camera.position.x, monsterGroup.position.y, camera.position.z);
-
-        const distToPlayer = monsterGroup.position.distanceTo(camera.position);
-
-        // Só persegue se o jogador estiver no mesmo piso (subsolo ou cap 2)
-        const inSameFloor = (currentChapter === 1 && camera.position.z < -18) || currentChapter === 2;
-
-        if (inSameFloor) {
-          // Movimento suave em direção ao jogador
-          const dir = new THREE.Vector3().subVectors(camera.position, monsterGroup.position).normalize();
-          monsterGroup.position.x += dir.x * 0.04;
-          monsterGroup.position.z += dir.z * 0.04;
-
-          // Animação de caminhada sinistra (balançar os braços)
-          armL.rotation.x = Math.sin(Date.now() * 0.008) * 0.4;
-          armR.rotation.x = -Math.sin(Date.now() * 0.008) * 0.4;
-
-          // Se encostar no jogador -> Morte
-          if (distToPlayer < 2.0) {
-            triggerDeath();
-          }
-        }
-      }
-
-      // --- MIRA / RAYCASTING ---
-      raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
-      const hitNotes = raycaster.intersectObjects(notes.map(n => n.mesh));
-      const hitKey = !hasKey ? raycaster.intersectObject(keyMesh) : [];
-      const hitDoor = !doorOpened ? raycaster.intersectObject(door) : [];
-      const hitPanel = (currentChapter === 1 && !elevatorMoving) ? raycaster.intersectObject(elevatorPanel) : [];
-
-      if (hitNotes.length > 0 && hitNotes[0].distance < 3.8) {
-        interactTarget = 'note';
-        targetData = notes.find(n => n.mesh === hitNotes[0].object);
-        interactBtn.innerText = "LER";
-        interactBtn.style.display = 'flex';
-      } else if (hitKey.length > 0 && hitKey[0].distance < 3.5) {
-        interactTarget = 'key';
-        interactBtn.innerText = "PEGAR CHAVE";
-        interactBtn.style.display = 'flex';
-      } else if (hitDoor.length > 0 && hitDoor[0].distance < 4.0) {
-        interactTarget = 'door';
-        interactBtn.innerText = hasKey ? "ABRIR PORTA" : "[TRANCADA]";
-        interactBtn.style.display = 'flex';
-      } else if (hitPanel.length > 0 && hitPanel[0].distance < 4.5) {
-        interactTarget = 'elevator';
-        interactBtn.innerText = "DESCER ELEVADOR";
-        interactBtn.style.display = 'flex';
-      } else {
-        interactTarget = null;
-        interactBtn.style.display = 'none';
-      }
-
-      // Flicker da Lanterna
-      if (Math.random() > 0.985) {
-        flashlight.intensity = 1.8 + Math.random() * 1.2;
-      }
-
-      renderer.render(scene, camera);
-    }
-    animate();
-
-    window.addEventListener('resize', () => {
-      camera.aspect = window.innerWidth / window.innerHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
-    });
   </script>
 </body>
 </html>
